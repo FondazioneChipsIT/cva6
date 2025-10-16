@@ -87,7 +87,13 @@ module commit_stage
     // TO_BE_COMPLETED - CONTROLLER
     output logic hfence_vvma_o,
     // TO_BE_COMPLETED - CONTROLLER
-    output logic hfence_gvma_o
+    output logic hfence_gvma_o,
+    // Control transfer records PC - CTR_UNIT
+    output logic [CVA6Cfg.XLEN-1:0][CVA6Cfg.NrCommitPorts-1:0] ctr_source_o,
+    // Control transfer records type - CTR_UNIT
+    output riscv::ctr_type_t [CVA6Cfg.NrCommitPorts-1:0] ctr_type_o,
+    // Control transfer records valid - CTR_UNIT
+    output logic [CVA6Cfg.NrCommitPorts-1:0] ctr_valid_o
 );
 
   // ila_0 i_ila_commit (
