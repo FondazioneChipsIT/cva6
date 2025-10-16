@@ -159,6 +159,9 @@ module decoder
     assign acc_is_control_flow_instr = 1'b0;
   end
 
+  // control transfer type of this instruction
+  riscv::ctr_type_t control_transfer_type;
+
   always_comb begin : decoder
 
     imm_select                             = NOIMM;
@@ -188,7 +191,8 @@ module decoder
     ebreak                                 = 1'b0;
     check_fprm                             = 1'b0;
     tinst                                  = 32'h0;
-
+    control_transfer_type                  = riscv::CTR_TYPE_NONE;
+    
     if (~ex_i.valid) begin
       case (instr.rtype.opcode)
         riscv::OpcodeSystem: begin
@@ -217,6 +221,7 @@ module decoder
                 12'b1_0000_0010: begin
                   if (CVA6Cfg.RVS) begin
                     instruction_o.op = ariane_pkg::SRET;
+                    control_transfer_type = riscv::CTR_TYPE_TRET;
                     // check privilege level, SRET can only be executed in S and M mode
                     // we'll just decode an illegal instruction if we are in the wrong privilege level
                     if (CVA6Cfg.RVU && priv_lvl_i == riscv::PRIV_LVL_U) begin
@@ -246,6 +251,7 @@ module decoder
                 // MRET
                 12'b11_0000_0010: begin
                   instruction_o.op = ariane_pkg::MRET;
+                  control_transfer_type = riscv::CTR_TYPE_TRET;
                   // check privilege level, MRET can only be executed in M mode
                   // otherwise we decode an illegal instruction
                   if ((CVA6Cfg.RVS && priv_lvl_i == riscv::PRIV_LVL_S) || (CVA6Cfg.RVU && priv_lvl_i == riscv::PRIV_LVL_U))
@@ -1619,6 +1625,23 @@ module decoder
           is_control_flow_instr_o = 1'b1;
           // invalid jump and link register -> reserved for vector encoding
           if (instr.itype.funct3 != 3'b0) illegal_instr = 1'b1;
+
+          if (instr.itype.rd == 5'd1 && instr.itype.rs1 != 5'd5) begin
+            control_transfer_type = riscv::CTR_TYPE_INDCALL;
+          end else if (instr.itype.rd == 5'd5 && instr.itype.rs1 != 5'd1) begin
+            control_transfer_type = riscv::CTR_TYPE_INDCALL;
+          end else if (instr.itype.rd == 5'd0 && ~(instr.itype.rs1 inside {5'd1, 5'd5})) begin
+            control_transfer_type = riscv::CTR_TYPE_INDJMP;
+          end else if (instr.itype.rd == 5'd1 && instr.itype.rs1 == 5'd5) begin
+            control_transfer_type = riscv::CTR_TYPE_CORSWAP;
+          end else if (instr.itype.rd == 5'd5 && instr.itype.rs1 == 5'd1) begin
+            control_transfer_type = riscv::CTR_TYPE_CORSWAP;
+          end else if (~(instr.itype.rd inside {5'd1, 5'd5}) && (instr.itype.rs1 inside {5'd1, 5'd5})) begin
+            control_transfer_type = riscv::CTR_TYPE_RET;
+          end else begin
+            control_transfer_type = riscv::CTR_TYPE_INDLJMP;
+          end
+
         end
         // Jump and link
         riscv::OpcodeJal: begin
@@ -1626,6 +1649,13 @@ module decoder
           imm_select              = JIMM;
           instruction_o.rd        = instr.utype.rd;
           is_control_flow_instr_o = 1'b1;
+          if (instr.utype.rd inside {5'd1, 5'd5}) begin
+              control_transfer_type = riscv::CTR_TYPE_DIRCALL;
+          end else if (instr.utype.rd == 5'd0) begin
+              control_transfer_type = riscv::CTR_TYPE_DIRJMP;
+          end else begin
+              control_transfer_type = riscv::CTR_TYPE_DIRLJMP;
+          end
         end
 
         riscv::OpcodeAuipc: begin
@@ -1907,4 +1937,20 @@ module decoder
       instruction_o.ex.cause = riscv::DEBUG_REQUEST;
     end
   end
+
+  // ------------------------
+  // Control Transfer Records
+  // ------------------------
+  always_comb begin : control_transfer_records
+    instruction_o.cftype = control_transfer_type;
+    if (instruction_o.ex.valid) begin
+      if (instruction_o.ex.cause[riscv::XLEN-1]) begin
+        instruction_o.cftype = riscv::CTR_TYPE_INTR;
+      end
+      else begin
+        instruction_o.cftype = riscv::CTR_TYPE_EXC;
+      end
+    end
+  end
+
 endmodule

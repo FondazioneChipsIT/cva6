@@ -21,75 +21,75 @@ module commit_stage
     parameter type scoreboard_entry_t = logic
 ) (
     // Subsystem Clock - SUBSYSTEM
-    input logic clk_i,
+    input logic                                                clk_i,
     // Asynchronous reset active low - SUBSYSTEM
-    input logic rst_ni,
+    input logic                                                rst_ni,
     // Request to halt the core - CONTROLLER
-    input logic halt_i,
+    input logic                                                halt_i,
     // request to flush dcache, also flush the pipeline - CACHE
-    input logic flush_dcache_i,
+    input logic                                                flush_dcache_i,
     // TO_BE_COMPLETED - EX_STAGE
-    output exception_t exception_o,
+    output                                                     exception_t exception_o,
     // Mark the F state as dirty - CSR_REGFILE
-    output logic dirty_fp_state_o,
+    output logic                                               dirty_fp_state_o,
     // TO_BE_COMPLETED - CSR_REGFILE
-    input logic single_step_i,
+    input logic                                                single_step_i,
     // The instruction we want to commit - ISSUE_STAGE
-    input scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_i,
+    input                                                      scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_i,
     // The instruction is cancelled - ISSUE_STAGE
-    input logic [CVA6Cfg.NrCommitPorts-1:0] commit_drop_i,
+    input logic [CVA6Cfg.NrCommitPorts-1:0]                    commit_drop_i,
     // Acknowledge that we are indeed committing - ISSUE_STAGE
-    output logic [CVA6Cfg.NrCommitPorts-1:0] commit_ack_o,
+    output logic [CVA6Cfg.NrCommitPorts-1:0]                   commit_ack_o,
     // Acknowledge that we are indeed committing - CSR_REGFILE
-    output logic [CVA6Cfg.NrCommitPorts-1:0] commit_macro_ack_o,
+    output logic [CVA6Cfg.NrCommitPorts-1:0]                   commit_macro_ack_o,
     // Register file write address - ISSUE_STAGE
-    output logic [CVA6Cfg.NrCommitPorts-1:0][4:0] waddr_o,
+    output logic [CVA6Cfg.NrCommitPorts-1:0][4:0]              waddr_o,
     // Register file write data - ISSUE_STAGE
     output logic [CVA6Cfg.NrCommitPorts-1:0][CVA6Cfg.XLEN-1:0] wdata_o,
     // Register file write enable - ISSUE_STAGE
-    output logic [CVA6Cfg.NrCommitPorts-1:0] we_gpr_o,
+    output logic [CVA6Cfg.NrCommitPorts-1:0]                   we_gpr_o,
     // Floating point register enable - ISSUE_STAGE
-    output logic [CVA6Cfg.NrCommitPorts-1:0] we_fpr_o,
+    output logic [CVA6Cfg.NrCommitPorts-1:0]                   we_fpr_o,
     // Result of AMO operation - CACHE
-    input amo_resp_t amo_resp_i,
+    input                                                      amo_resp_t amo_resp_i,
     // TO_BE_COMPLETED - FRONTEND_CSR_REGFILE
-    output logic [CVA6Cfg.VLEN-1:0] pc_o,
+    output logic [CVA6Cfg.VLEN-1:0]                            pc_o,
     // Decoded CSR operation - CSR_REGFILE
-    output fu_op csr_op_o,
+    output                                                     fu_op csr_op_o,
     // Data to write to CSR - CSR_REGFILE
-    output logic [CVA6Cfg.XLEN-1:0] csr_wdata_o,
+    output logic [CVA6Cfg.XLEN-1:0]                            csr_wdata_o,
     // Data to read from CSR - CSR_REGFILE
-    input logic [CVA6Cfg.XLEN-1:0] csr_rdata_i,
+    input logic [CVA6Cfg.XLEN-1:0]                             csr_rdata_i,
     // Write the fflags CSR - CSR_REGFILE
-    output logic csr_write_fflags_o,
+    output logic                                               csr_write_fflags_o,
     // Exception or interrupt occurred in CSR stage (the same as commit) - CSR_REGFILE
-    input exception_t csr_exception_i,
+    input                                                      exception_t csr_exception_i,
     // Commit the pending store - EX_STAGE
-    output logic commit_lsu_o,
+    output logic                                               commit_lsu_o,
     // Commit buffer of LSU is ready - EX_STAGE
-    input logic commit_lsu_ready_i,
+    input logic                                                commit_lsu_ready_i,
     // Transaction id of first commit port - ID_STAGE
-    output logic [CVA6Cfg.TRANS_ID_BITS-1:0] commit_tran_id_o,
+    output logic [CVA6Cfg.TRANS_ID_BITS-1:0]                   commit_tran_id_o,
     // Valid AMO in commit stage - EX_STAGE
-    output logic amo_valid_commit_o,
+    output logic                                               amo_valid_commit_o,
     // No store is pending - EX_STAGE
-    input logic no_st_pending_i,
+    input logic                                                no_st_pending_i,
     // Commit the pending CSR instruction - EX_STAGE
-    output logic commit_csr_o,
+    output logic                                               commit_csr_o,
     // Flush I$ and pipeline - CONTROLLER
-    output logic fence_i_o,
+    output logic                                               fence_i_o,
     // Flush D$ and pipeline - CONTROLLER
-    output logic fence_o,
+    output logic                                               fence_o,
     // Request a pipeline flush - CONTROLLER
-    output logic flush_commit_o,
+    output logic                                               flush_commit_o,
     // Flush TLBs and pipeline - CONTROLLER
-    output logic sfence_vma_o,
+    output logic                                               sfence_vma_o,
     // TO_BE_COMPLETED - CONTROLLER
-    output logic hfence_vvma_o,
+    output logic                                               hfence_vvma_o,
     // TO_BE_COMPLETED - CONTROLLER
-    output logic hfence_gvma_o,
-    // Breakpoint exception from trigger module
-    input logic break_from_trigger_i
+    output logic                                               hfence_gvma_o,
+  // Breakpoint exception from trigger module
+    input logic                                                break_from_trigger_i
 );
 
   // ila_0 i_ila_commit (
