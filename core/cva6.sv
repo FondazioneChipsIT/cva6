@@ -119,6 +119,7 @@ module cva6
       logic is_double_rd_macro_instr;  // is double move decoded 32bit instruction of macro definition
       logic vfp;  // is this a vector floating-point instruction?
       logic is_zcmt;  //is a zcmt instruction
+      riscv::ctr_type_t cftype;  // 4-bit control transfer type, encoded according to the RISC-V Control Transfer Records extension.
     },
     localparam type writeback_t = struct packed {
       logic valid;  // wb data is valid
@@ -126,6 +127,25 @@ module cva6
       logic ex_valid;  // exception from WB
       logic [CVA6Cfg.TRANS_ID_BITS-1:0] trans_id;  //transaction ID
     },
+
+    // Ctr structures
+    localparam type ctr_commit_port_t = struct packed {
+      logic [CVA6Cfg.XLEN-1:0] ctr_source;
+      riscv::ctr_type_t    ctr_type;
+      logic [31:0]         ctr_instr;
+      riscv::priv_lvl_t    priv_lvl;
+      logic                valid;
+    },
+
+    localparam type ctr_scoreboard_t = struct packed {
+      ctr_commit_port_t port_1;
+      ctr_commit_port_t port_2;
+    },
+
+    localparam type priv_lvl_t = riscv::priv_lvl_t,
+    localparam type ctr_type_t = riscv::ctr_type_t,
+    localparam type ctrsource_rv_t = riscv::ctrsource_rv_t,
+    localparam type ctrtarget_rv_t = riscv::ctrtarget_rv_t,
 
     // branch-predict
     // this is the struct we get back from ex stage and we will use it to update
@@ -335,7 +355,17 @@ module cva6
     // noc request, can be AXI or OpenPiton - SUBSYSTEM
     output noc_req_t noc_req_o,
     // noc response, can be AXI or OpenPiton - SUBSYSTEM
-    input noc_resp_t noc_resp_i
+    input noc_resp_t noc_resp_i,
+    // Control Transfer Records source register - CTR_UNIT
+    output riscv::ctrsource_rv_t         emitter_source_o,
+    // Control Transfer Records target register - CTR_UNIT
+    output riscv::ctrtarget_rv_t         emitter_target_o,
+    // Control Transfer Records data register - CTR_UNIT
+    output riscv::ctr_type_t             emitter_data_o,
+    // Control Transfer Records instr register - CTR_UNIT
+    output logic [31:0]                  emitter_instr_o,
+    // Privilege execution level - CTR_UNIT
+    output riscv::priv_lvl_t             priv_lvl_o
 );
 
   localparam type interrupts_t = struct packed {
@@ -663,6 +693,17 @@ module cva6
   logic [63:0] inval_addr;
   logic inval_valid;
   logic inval_ready;
+
+  // ------------------------
+  // Control Transfer Signals
+  // ------------------------
+
+  logic [CVA6Cfg.NrCommitPorts-1:0]                 ctr_valid;
+  logic [CVA6Cfg.NrCommitPorts-1:0] [31:0]          ctr_instr;
+  riscv::ctrsource_rv_t [CVA6Cfg.NrCommitPorts-1:0] ctr_source;
+  riscv::ctr_type_t [CVA6Cfg.NrCommitPorts-1:0]     ctr_type;
+
+  ctr_commit_port_t ctr_commit_port_1, ctr_commit_port_2;
 
   // --------------
   // Frontend
@@ -1835,6 +1876,54 @@ module cva6
       .flu_trans_id_ex_id_i(flu_trans_id_ex_id),
       .rvfi_probes_o(rvfi_probes_o)
 
+  );
+
+  // ------------------------
+  // Control Transfer Records
+  // ------------------------
+  // Handle data interface to be the control transfer records unit
+
+  for(genvar i=0;i<CVA6Cfg.NrCommitPorts;i++) begin
+     always_comb begin
+       ctr_valid[i]  = commit_ack[i];
+       ctr_instr[i]  = commit_instr_id_commit[i].ex.tval[31:0];
+       ctr_source[i] = commit_instr_id_commit[i].pc;
+       if (commit_instr_id_commit[i].ex.valid)
+         ctr_type[i]   = riscv::CTR_TYPE_EXC;
+       else
+         ctr_type[i]   = commit_instr_id_commit[i].cftype;
+     end
+  end
+
+  assign ctr_commit_port_1 = {
+     ctr_source: ctr_source[0],
+     ctr_type  : ctr_type[0],
+     ctr_instr : ctr_instr[0],
+     priv_lvl  : priv_lvl,
+     valid     : ctr_valid[0]
+  };
+
+  assign ctr_commit_port_2 = {
+     ctr_source: ctr_source[1],
+     ctr_type  : ctr_type[1],
+     ctr_instr : ctr_instr[1],
+     priv_lvl  : priv_lvl,
+     valid     : ctr_valid[1]
+  };
+
+  ctr_unit  #(
+      .CVA6Cfg            (CVA6Cfg),
+      .ctr_commit_port_t  (ctr_commit_port_t)
+  ) i_ctr_unit (
+      .clk_i               ( clk_i             ),
+      .rst_ni              ( rst_ni            ),
+      .ctr_commit_port_1_i ( ctr_commit_port_1 ),
+      .ctr_commit_port_2_i ( ctr_commit_port_2 ),
+      .emitter_source_o,
+      .emitter_target_o,
+      .emitter_data_o,
+      .emitter_instr_o,
+      .priv_lvl_o
   );
 
   //pragma translate_off
