@@ -697,9 +697,6 @@ module cva6
   // ------------------------
   // Control Transfer Signals
   // ------------------------
-  logic [CVA6Cfg.XLEN-1:0][CVA6Cfg.NrCommitPorts-1:0]     ctr_source_commit_ctr;
-  riscv::ctr_type_t [CVA6Cfg.NrCommitPorts-1:0] ctr_type_commit_ctr;
-  logic [CVA6Cfg.NrCommitPorts-1:0]             ctr_valid_commit_ctr;
 
   logic [CVA6Cfg.NrCommitPorts-1:0]                 ctr_valid;
   logic [CVA6Cfg.NrCommitPorts-1:0] [31:0]          ctr_instr;
@@ -1168,10 +1165,7 @@ module cva6
       .flush_commit_o    (flush_commit),
       .sfence_vma_o      (sfence_vma_commit_controller),
       .hfence_vvma_o     (hfence_vvma_commit_controller),
-      .hfence_gvma_o     (hfence_gvma_commit_controller),
-      .ctr_source_o      (ctr_source_commit_ctr),
-      .ctr_type_o        (ctr_type_commit_ctr),
-      .ctr_valid_o       (ctr_valid_commit_ctr)
+      .hfence_gvma_o     (hfence_gvma_commit_controller)
   );
 
   assign commit_ack = commit_macro_ack & ~commit_drop_id_commit;
@@ -1925,7 +1919,11 @@ module cva6
       .rst_ni              ( rst_ni            ),
       .ctr_commit_port_1_i ( ctr_commit_port_1 ),
       .ctr_commit_port_2_i ( ctr_commit_port_2 ),
-      .*
+      .emitter_source_o,
+      .emitter_target_o,
+      .emitter_data_o,
+      .emitter_instr_o,
+      .priv_lvl_o
   );
 
   //pragma translate_off
