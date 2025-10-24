@@ -228,9 +228,9 @@ module scoreboard #(
           mem_n[trans_id_i[i]].sbe.cftype = riscv::CTR_TYPE_EXC;
         end else if (resolved_branch_i.valid && resolved_branch_i.cf_type == ariane_pkg::Branch) begin
           if (resolved_branch_i.is_taken) begin
-            mem_n[trans_id_i[i]].sbe.cftype = riscv::CTR_TYPE_TKBR;
+            mem_n[trans_id_i[0]].sbe.cftype = riscv::CTR_TYPE_TKBR;
           end else begin
-            mem_n[trans_id_i[i]].sbe.cftype = riscv::CTR_TYPE_NTBR;
+            mem_n[trans_id_i[0]].sbe.cftype = riscv::CTR_TYPE_NTBR;
           end
         end
       end

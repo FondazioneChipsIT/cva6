@@ -190,7 +190,8 @@ module decoder
     ebreak                                 = 1'b0;
     check_fprm                             = 1'b0;
     tinst                                  = 32'h0;
-
+    control_transfer_type                  = riscv::CTR_TYPE_NONE;
+    
     if (~ex_i.valid) begin
       case (instr.rtype.opcode)
         riscv::OpcodeSystem: begin
