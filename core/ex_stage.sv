@@ -724,7 +724,7 @@ module ex_stage
   // ----------------
   generate
     if (CVA6Cfg.ZKN) begin : aes_gen
-      aes #(
+      cva6_aes #(
           .CVA6Cfg  (CVA6Cfg),
           .fu_data_t(fu_data_t)
       ) aes_i (
