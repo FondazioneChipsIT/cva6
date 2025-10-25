@@ -10,7 +10,7 @@
 // Zknd (AES Decryption and related instructions), Zkne (AES Encryption support, including AES rounds and key expansion steps),
 // Zknh (SHA-256 and SHA-512 hash functions for secure hashing operations).
 //
-package aes_pkg;
+package cva6_aes_pkg;
 
   // ----------------------
   // AES functions
