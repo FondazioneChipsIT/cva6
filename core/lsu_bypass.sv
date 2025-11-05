@@ -27,7 +27,8 @@ module lsu_bypass
   import ariane_pkg::*;
 #(
     parameter config_pkg::cva6_cfg_t CVA6Cfg = config_pkg::cva6_cfg_empty,
-    parameter type lsu_ctrl_t = logic
+    parameter type lsu_ctrl_t = logic,
+    parameter type bp_resolve_t = logic
 ) (
     // Subsystem Clock - SUBSYSTEM
     input logic clk_i,
@@ -44,6 +45,8 @@ module lsu_bypass
     input logic      pop_ld_i,
     // TO_BE_COMPLETED - TO_BE_COMPLETED
     input logic      pop_st_i,
+
+    input bp_resolve_t resolved_branch_i,
 
     // TO_BE_COMPLETED - TO_BE_COMPLETED
     output lsu_ctrl_t lsu_ctrl_o,
@@ -99,6 +102,16 @@ module lsu_bypass
       read_pointer = '0;
       mem_n = '0;
     end
+    
+    // If branch result arrives when a speculative load is on the buffer, update its speculative state
+    if (mem_q[!read_pointer_q].is_speculative_load && mem_q[!read_pointer_q].valid && resolved_branch_i.valid) begin
+      if (resolved_branch_i.is_mispredict) begin
+        mem_n[!read_pointer_q].is_speculative_load_miss = 1'b1;
+      end else begin
+        mem_n[!read_pointer_q].is_speculative_load = 1'b0;
+      end
+    end
+
     // default assignments
     read_pointer_n  = read_pointer;
     write_pointer_n = write_pointer;

@@ -169,7 +169,9 @@ module issue_stage
     // Information dedicated to RVFI - RVFI
     output logic [CVA6Cfg.NrIssuePorts-1:0][CVA6Cfg.XLEN-1:0] rvfi_rs2_o,
     // Original instruction bits for AES
-    output logic [5:0] orig_instr_aes_bits
+    output logic [5:0] orig_instr_aes_bits,
+    // Signals speculative loads to LSU for non-idempotent load handling - EX_STAGE
+    output logic speculative_load_o
 );
   // ---------------------------------------------------
   // Scoreboard (SB) <-> Issue and Read Operands (IRO)
@@ -309,7 +311,8 @@ module issue_stage
       .stall_issue_o,
       .rvfi_rs1_o              (rvfi_rs1_o),
       .rvfi_rs2_o              (rvfi_rs2_o),
-      .orig_instr_aes_bits     (orig_instr_aes_bits)
+      .orig_instr_aes_bits     (orig_instr_aes_bits),
+      .speculative_load_o
   );
 
 endmodule
