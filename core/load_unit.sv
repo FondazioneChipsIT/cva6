@@ -25,7 +25,8 @@ module load_unit
     parameter type dcache_req_i_t = logic,
     parameter type dcache_req_o_t = logic,
     parameter type exception_t = logic,
-    parameter type lsu_ctrl_t = logic
+    parameter type lsu_ctrl_t = logic,
+    parameter type bp_resolve_t = logic
 ) (
     // Subsystem Clock - SUBSYSTEM
     input logic clk_i,
@@ -72,7 +73,11 @@ module load_unit
     // Store buffer is empty - STORE_UNIT
     input logic store_buffer_empty_i,
     // Transaction ID of the committing instruction - COMMIT_STAGE
-    input logic [CVA6Cfg.TRANS_ID_BITS-1:0] commit_tran_id_i,
+    input logic [CVA6Cfg.NrCommitPorts-1:0][CVA6Cfg.TRANS_ID_BITS-1:0] commit_tran_id_i,
+    // Signals speculative loads for non-idempotent load handling - ISSUE_STAGE
+    input logic speculative_load_i,
+    // Result from branch unit - EX_STAGE
+    input bp_resolve_t resolved_branch_i,
     // Data cache request out - CACHES
     input dcache_req_o_t req_port_i,
     // Data cache request in - CACHES
@@ -92,6 +97,12 @@ module load_unit
     WAIT_WB_EMPTY
   }
       state_d, state_q;
+
+  enum logic [1:0] {
+    WAIT,
+    HIT,
+    MISS 
+  } spec_load_state_d, spec_load_state_q;
 
   // in order to decouple the response interface from the request interface,
   // we need a a buffer which can hold all inflight memory load requests
@@ -224,9 +235,23 @@ module load_unit
   assign paddr_ni = config_pkg::is_inside_nonidempotent_regions(
       CVA6Cfg, {{52 - CVA6Cfg.PPNW{1'b0}}, dtlb_ppn_i, 12'd0}
   );
-  assign not_commit_time = commit_tran_id_i != lsu_ctrl_i.trans_id;
+  assign not_commit_time = (commit_tran_id_i[0] != lsu_ctrl_i.trans_id) && (commit_tran_id_i[1] != lsu_ctrl_i.trans_id);
   assign inflight_stores = (!dcache_wbuffer_not_ni_i || !store_buffer_empty_i);
-  assign stall_ni = (inflight_stores || not_commit_time) && (paddr_ni && CVA6Cfg.NonIdemPotenceEn);
+  assign stall_ni = (inflight_stores || not_commit_time || (lsu_ctrl_i.is_speculative_load && spec_load_state_q == WAIT)) && (paddr_ni && CVA6Cfg.NonIdemPotenceEn);
+
+  always_comb begin : speculative_load_state
+    spec_load_state_d = spec_load_state_q;
+    if (lsu_ctrl_i.is_speculative_load && spec_load_state_q == WAIT) begin
+      if ((resolved_branch_i.valid && resolved_branch_i.is_mispredict) || lsu_ctrl_i.is_speculative_load_miss) begin
+        spec_load_state_d = MISS;
+      end else if (resolved_branch_i.valid && !resolved_branch_i.is_mispredict) begin
+        spec_load_state_d = HIT;
+      end
+    end
+    if (pop_ld_o) begin
+      spec_load_state_d = WAIT;
+    end
+  end
 
   // ---------------
   // Load Control
@@ -382,8 +407,14 @@ module load_unit
         end else if (state_q == ABORT_TRANSACTION_NI && CVA6Cfg.NonIdemPotenceEn) begin
           req_port_o.kill_req = 1'b1;
           req_port_o.tag_valid = 1'b1;
-          // re-do the request
-          state_d = WAIT_WB_EMPTY;
+          // pop load if it was a speculative non idempotent load with missprediction
+          if (spec_load_state_q == MISS) begin
+            pop_ld_o = 1'b1;
+            state_d = IDLE;
+          end else begin
+            // re-do the request
+            state_d = WAIT_WB_EMPTY;
+          end
         end else if (state_q == WAIT_WB_EMPTY && CVA6Cfg.NonIdemPotenceEn && dcache_wbuffer_not_ni_i) begin
           // Wait until the write-back buffer is empty in the data cache.
           // the write buffer is empty, so let's go and re-do the translation.
@@ -432,7 +463,8 @@ module load_unit
     // we got an rvalid and its corresponding request was not flushed
     if (req_port_i.data_rvalid && !ldbuf_flushed_q[ldbuf_rindex]) begin
       // if the response corresponds to the last request, check that we are not killing it
-      if ((ldbuf_last_id_q != ldbuf_rindex) || !req_port_o.kill_req) valid_o = 1'b1;
+      // valid is also asserted on killing a misspredicted speculative non idempotent load
+      if ((ldbuf_last_id_q != ldbuf_rindex) || !req_port_o.kill_req || (spec_load_state_q == MISS && pop_ld_o)) valid_o = 1'b1;
       // the output is also valid if we got an exception. An exception arrives one cycle after
       // dtlb_hit_i is asserted, i.e. when we are in SEND_TAG. Otherwise, the exception
       // corresponds to the next request that is already being translated (see below).
@@ -458,8 +490,10 @@ module load_unit
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
       state_q <= IDLE;
+      spec_load_state_q <= WAIT;
     end else begin
       state_q <= state_d;
+      spec_load_state_q <= spec_load_state_d;
     end
   end
 
@@ -552,15 +586,15 @@ module load_unit
   // check invalid offsets, but only issue a warning as these conditions actually trigger a load address misaligned exception
   addr_offset0 :
   assert property (@(posedge clk_i) disable iff (~rst_ni)
-        ldbuf_w |->  (ldbuf_wdata.operation inside {ariane_pkg::LW, ariane_pkg::LWU}) |-> ldbuf_wdata.address_offset < 5)
+        ldbuf_w |-> !lsu_ctrl_i.is_speculative_load |-> (ldbuf_wdata.operation inside {ariane_pkg::LW, ariane_pkg::LWU}) |-> ldbuf_wdata.address_offset < 5)
   else $fatal(1, "invalid address offset used with {LW, LWU}");
   addr_offset1 :
   assert property (@(posedge clk_i) disable iff (~rst_ni)
-        ldbuf_w |->  (ldbuf_wdata.operation inside {ariane_pkg::LH, ariane_pkg::LHU}) |-> ldbuf_wdata.address_offset < 7)
+        ldbuf_w |-> !lsu_ctrl_i.is_speculative_load |->  (ldbuf_wdata.operation inside {ariane_pkg::LH, ariane_pkg::LHU}) |-> ldbuf_wdata.address_offset < 7)
   else $fatal(1, "invalid address offset used with {LH, LHU}");
   addr_offset2 :
   assert property (@(posedge clk_i) disable iff (~rst_ni)
-        ldbuf_w |->  (ldbuf_wdata.operation inside {ariane_pkg::LB, ariane_pkg::LBU}) |-> ldbuf_wdata.address_offset < 8)
+        ldbuf_w |-> !lsu_ctrl_i.is_speculative_load |->  (ldbuf_wdata.operation inside {ariane_pkg::LB, ariane_pkg::LBU}) |-> ldbuf_wdata.address_offset < 8)
   else $fatal(1, "invalid address offset used with {LB, LBU}");
   //pragma translate_on
 
