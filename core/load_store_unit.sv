@@ -587,12 +587,13 @@ module load_store_unit
       .page_offset_matches_i(page_offset_matches),
       .store_buffer_empty_i (store_buffer_empty),
       .commit_tran_id_i,
-      .speculative_load_i,
       .resolved_branch_i,
       // to memory arbiter
       .req_port_i           (dcache_req_ports_i[1]),
       .req_port_o           (dcache_req_ports_o[1]),
-      .dcache_wbuffer_not_ni_i
+      .dcache_wbuffer_not_ni_i,
+      .en_ld_st_translation_i,
+      .en_ld_st_g_translation_i
   );
 
   // ----------------------------

@@ -76,6 +76,13 @@ module lsu_bypass
     // we've got a valid LSU request
     if (lsu_req_valid_i) begin
       mem_n[write_pointer_q] = lsu_req_i;
+      if (lsu_req_i.is_speculative_load && resolved_branch_i.valid) begin
+        if (resolved_branch_i.is_mispredict) begin
+          mem_n[write_pointer_q].is_speculative_load_miss = 1'b1;
+        end else begin
+          mem_n[write_pointer_q].is_speculative_load = 1'b0;
+        end
+      end
       write_pointer++;
       status_cnt++;
     end
@@ -103,15 +110,6 @@ module lsu_bypass
       mem_n = '0;
     end
     
-    // If branch result arrives when a speculative load is on the buffer, update its speculative state
-    if (mem_q[!read_pointer_q].is_speculative_load && mem_q[!read_pointer_q].valid && resolved_branch_i.valid) begin
-      if (resolved_branch_i.is_mispredict) begin
-        mem_n[!read_pointer_q].is_speculative_load_miss = 1'b1;
-      end else begin
-        mem_n[!read_pointer_q].is_speculative_load = 1'b0;
-      end
-    end
-
     // default assignments
     read_pointer_n  = read_pointer;
     write_pointer_n = write_pointer;

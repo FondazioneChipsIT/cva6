@@ -74,8 +74,6 @@ module load_unit
     input logic store_buffer_empty_i,
     // Transaction ID of the committing instruction - COMMIT_STAGE
     input logic [CVA6Cfg.NrCommitPorts-1:0][CVA6Cfg.TRANS_ID_BITS-1:0] commit_tran_id_i,
-    // Signals speculative loads for non-idempotent load handling - ISSUE_STAGE
-    input logic speculative_load_i,
     // Result from branch unit - EX_STAGE
     input bp_resolve_t resolved_branch_i,
     // Data cache request out - CACHES
@@ -83,7 +81,11 @@ module load_unit
     // Data cache request in - CACHES
     output dcache_req_i_t req_port_o,
     // Presence of non-idempotent operations in the D$ write buffer - CACHES
-    input logic dcache_wbuffer_not_ni_i
+    input logic dcache_wbuffer_not_ni_i,
+    // Virtual memory translation for load/stores 
+    input logic en_ld_st_translation_i,
+    // G-Stage translation for load/stores
+    input logic en_ld_st_g_translation_i
 );
   enum logic [3:0] {
     IDLE,
@@ -136,6 +138,8 @@ module load_unit
   ldbuf_t    ldbuf_rdata;
   ldbuf_id_t ldbuf_rindex;
   ldbuf_id_t ldbuf_last_id_q;
+  logic en_translation, no_trans_paddr_ni;
+  logic [CVA6Cfg.PPNW-1:0] no_trans_ppn;
 
   assign ldbuf_full = &ldbuf_valid_q;
 
@@ -237,7 +241,13 @@ module load_unit
   );
   assign not_commit_time = (commit_tran_id_i[0] != lsu_ctrl_i.trans_id) && (commit_tran_id_i[1] != lsu_ctrl_i.trans_id);
   assign inflight_stores = (!dcache_wbuffer_not_ni_i || !store_buffer_empty_i);
-  assign stall_ni = (inflight_stores || not_commit_time || (lsu_ctrl_i.is_speculative_load && spec_load_state_q == WAIT)) && (paddr_ni && CVA6Cfg.NonIdemPotenceEn);
+  assign stall_ni = (inflight_stores || not_commit_time) && (paddr_ni && CVA6Cfg.NonIdemPotenceEn);
+
+  assign no_trans_ppn = (CVA6Cfg.PPNW)'(lsu_ctrl_i.vaddr[((CVA6Cfg.PLEN > CVA6Cfg.VLEN) ? CVA6Cfg.VLEN -1: CVA6Cfg.PLEN -1 ):12]);
+  assign no_trans_paddr_ni = config_pkg::is_inside_nonidempotent_regions(
+      CVA6Cfg, {{52 - CVA6Cfg.PPNW{1'b0}}, no_trans_ppn, 12'd0}
+  );
+  assign en_translation = en_ld_st_translation_i || en_ld_st_g_translation_i;
 
   always_comb begin : speculative_load_state
     spec_load_state_d = spec_load_state_q;
@@ -248,7 +258,7 @@ module load_unit
         spec_load_state_d = HIT;
       end
     end
-    if (pop_ld_o) begin
+    if (pop_ld_o || flush_i) begin
       spec_load_state_d = WAIT;
     end
   end
@@ -273,7 +283,7 @@ module load_unit
     // In IDLE and SEND_TAG states, this unit can accept a new load request
     // when the load buffer is not full or if there is a response and the
     // load buffer is in fall-through mode
-    accept_req           = (valid_i && (!ldbuf_full || (LDBUF_FALLTHROUGH && ldbuf_r)));
+    accept_req           = (valid_i && (!ldbuf_full || (LDBUF_FALLTHROUGH && ldbuf_r)) && !(lsu_ctrl_i.is_speculative_load && (en_translation || no_trans_paddr_ni) && CVA6Cfg.NonIdemPotenceEn && spec_load_state_q != HIT));
 
     case (state_q)
       IDLE: begin
@@ -306,6 +316,8 @@ module load_unit
             // wait for the store buffer to train and the page offset to not match anymore
             state_d = WAIT_PAGE_OFFSET;
           end
+        end else if (valid_i && lsu_ctrl_i.is_speculative_load && (en_translation || no_trans_paddr_ni) && CVA6Cfg.NonIdemPotenceEn && spec_load_state_q == MISS) begin
+          pop_ld_o = ~req_port_i.data_rvalid;
         end
       end
 
@@ -376,6 +388,8 @@ module load_unit
             // wait for the store buffer to train and the page offset to not match anymore
             state_d = WAIT_PAGE_OFFSET;
           end
+        end else if (valid_i && lsu_ctrl_i.is_speculative_load && (en_translation || no_trans_paddr_ni) && CVA6Cfg.NonIdemPotenceEn && spec_load_state_q == MISS) begin
+          pop_ld_o = ~req_port_i.data_rvalid;
         end
         // ----------
         // Exception
@@ -407,14 +421,8 @@ module load_unit
         end else if (state_q == ABORT_TRANSACTION_NI && CVA6Cfg.NonIdemPotenceEn) begin
           req_port_o.kill_req = 1'b1;
           req_port_o.tag_valid = 1'b1;
-          // pop load if it was a speculative non idempotent load with missprediction
-          if (spec_load_state_q == MISS) begin
-            pop_ld_o = 1'b1;
-            state_d = IDLE;
-          end else begin
-            // re-do the request
-            state_d = WAIT_WB_EMPTY;
-          end
+          // re-do the request
+          state_d = WAIT_WB_EMPTY;
         end else if (state_q == WAIT_WB_EMPTY && CVA6Cfg.NonIdemPotenceEn && dcache_wbuffer_not_ni_i) begin
           // Wait until the write-back buffer is empty in the data cache.
           // the write buffer is empty, so let's go and re-do the translation.
@@ -464,7 +472,7 @@ module load_unit
     if (req_port_i.data_rvalid && !ldbuf_flushed_q[ldbuf_rindex]) begin
       // if the response corresponds to the last request, check that we are not killing it
       // valid is also asserted on killing a misspredicted speculative non idempotent load
-      if ((ldbuf_last_id_q != ldbuf_rindex) || !req_port_o.kill_req || (spec_load_state_q == MISS && pop_ld_o)) valid_o = 1'b1;
+      if ((ldbuf_last_id_q != ldbuf_rindex) || !req_port_o.kill_req) valid_o = 1'b1;
       // the output is also valid if we got an exception. An exception arrives one cycle after
       // dtlb_hit_i is asserted, i.e. when we are in SEND_TAG. Otherwise, the exception
       // corresponds to the next request that is already being translated (see below).
@@ -482,6 +490,13 @@ module load_unit
       trans_id_o = lsu_ctrl_i.trans_id;
       valid_o = 1'b1;
       ex_o.valid = 1'b1;
+    end
+
+    // raise valid when removing a misspredicted speculative load
+    if (valid_i && lsu_ctrl_i.is_speculative_load && (en_translation || no_trans_paddr_ni) && CVA6Cfg.NonIdemPotenceEn && spec_load_state_q == MISS && !req_port_i.data_rvalid) begin
+      trans_id_o = lsu_ctrl_i.trans_id;
+      valid_o = 1'b1;
+      ex_o.valid = 1'b0;
     end
   end
 

@@ -1085,8 +1085,10 @@ module issue_read_operands
         branch_predict_o      <= issue_instr_i[0].bp;
         if (CVA6Cfg.RVZCMT) is_zcmt_o <= issue_instr_i[0].is_zcmt;
         else is_zcmt_o <= '0;
-        if (issue_instr_valid_i[1] && issue_instr_i[1].fu == LOAD && issue_ack_o[1]) begin
-          speculative_load_o <= 1'b1;
+        if (CVA6Cfg.SuperscalarEn && CVA6Cfg.SpeculativeSb) begin
+          if (issue_instr_valid_i[1] && issue_instr_i[1].fu == LOAD && issue_ack_o[1]) begin
+            speculative_load_o <= 1'b1;
+          end
         end
       end
       x_transaction_rejected_o <= 1'b0;
