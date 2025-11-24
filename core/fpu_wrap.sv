@@ -65,9 +65,9 @@ module fpu_wrap
         Width: unsigned'(CVA6Cfg.FLen),  // parameterized using CVA6Cfg.FLen
         EnableVectors: CVA6Cfg.XFVec,
         EnableNanBox: 1'b1,
-        FpFmtMask: {CVA6Cfg.RVF, CVA6Cfg.RVD, CVA6Cfg.XF16, CVA6Cfg.XF8, CVA6Cfg.XF16ALT},
+        FpFmtMask: {CVA6Cfg.RVF, CVA6Cfg.RVD, CVA6Cfg.XF16, CVA6Cfg.XF8, CVA6Cfg.XF16ALT, CVA6Cfg.XF8ALT},
         IntFmtMask: {
-          CVA6Cfg.XFVec && CVA6Cfg.XF8,
+          CVA6Cfg.XFVec && (CVA6Cfg.XF8 || CVA6Cfg.XF8ALT),
           CVA6Cfg.XFVec && (CVA6Cfg.XF16 || CVA6Cfg.XF16ALT),
           1'b1,
           1'b1
@@ -76,24 +76,27 @@ module fpu_wrap
 
     // Implementation (number of registers etc)
     localparam fpnew_pkg::fpu_implementation_t FPU_IMPLEMENTATION = '{
-        PipeRegs: '{  // FP32, FP64, FP16, FP8, FP16alt
+        PipeRegs: '{  // FP32, FP64, FP16, FP8, FP16alt, FP8alt
             '{
                 unsigned'(LAT_COMP_FP32),
                 unsigned'(LAT_COMP_FP64),
                 unsigned'(LAT_COMP_FP16),
                 unsigned'(LAT_COMP_FP8),
-                unsigned'(LAT_COMP_FP16ALT)
+                unsigned'(LAT_COMP_FP16ALT),
+                unsigned'(LAT_COMP_FP8ALT)
             },  // ADDMUL
             '{default: unsigned'(LAT_DIVSQRT)},  // DIVSQRT
             '{default: unsigned'(LAT_NONCOMP)},  // NONCOMP
-            '{default: unsigned'(LAT_CONV)}
-        },  // CONV
+            '{default: unsigned'(LAT_CONV)}, // CONV
+            '{default: unsigned'(LAT_DOTP)} // DOTP
+        },
         UnitTypes: '{
             '{default: fpnew_pkg::PARALLEL},  // ADDMUL
             '{default: fpnew_pkg::MERGED},  // DIVSQRT
             '{default: fpnew_pkg::PARALLEL},  // NONCOMP
-            '{default: fpnew_pkg::MERGED}
-        },  // CONV
+            '{default: fpnew_pkg::MERGED}, // CONV
+            '{default: fpnew_pkg::DISABLED} // DOTP
+        },
         PipeConfig: fpnew_pkg::DISTRIBUTED
     };
 
@@ -536,6 +539,7 @@ module fpu_wrap
     ) i_fpnew_bulk (
         .clk_i,
         .rst_ni,
+        .hart_id_i     ('0),
         .operands_i    (fpu_operands),
         .rnd_mode_i    (fpnew_pkg::roundmode_e'(fpu_rm)),
         .op_i          (fpnew_pkg::operation_e'(fpu_op)),
