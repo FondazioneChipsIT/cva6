@@ -455,4 +455,13 @@ module id_stage #(
     end
   end
 
+  `define ila(__name, __signal)  \
+  (* dont_touch = "yes" *) (* mark_debug = "true" *) logic [$bits(__signal)-1:0] __name; \
+  assign __name = __signal;
+
+  `ila(fetch_entry_pc_0, fetch_entry_i[0].address)
+  `ila(fetch_entry_pc_1, fetch_entry_i[1].address)
+  `ila(fetch_entry_instr_0, fetch_entry_i[0].instruction)
+  `ila(fetch_entry_instr_1, fetch_entry_i[1].instruction)
+
 endmodule

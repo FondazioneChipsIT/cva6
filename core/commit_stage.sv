@@ -405,4 +405,17 @@ module commit_stage
       exception_o.valid = 1'b0;
     end
   end
+
+    `define ila(__name, __signal)  \
+  (* dont_touch = "yes" *) (* mark_debug = "true" *) logic [$bits(__signal)-1:0] __name; \
+  assign __name = __signal;
+
+  `ila(commit_instr_pc_0, commit_instr_i[0].pc)
+  `ila(commit_instr_pc_1, commit_instr_i[1].pc)
+  `ila(commit_instr_valid_0, commit_instr_i[0].valid)
+  `ila(commit_instr_valid_1, commit_instr_i[1].valid)
+  `ila(commit_drop_0, commit_drop_i[0])
+  `ila(commit_drop_1, commit_drop_i[0])
+  `ila(commit_instr_ex_0, commit_instr_i[0].ex.valid)
+  `ila(commit_instr_ex_1, commit_instr_i[1].ex.valid)
 endmodule

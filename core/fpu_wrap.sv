@@ -562,6 +562,23 @@ module fpu_wrap
         .early_valid_o (fpu_early_valid_o)
     );
 
+    `define ila(__name, __signal)  \
+     (* dont_touch = "yes" *) (* mark_debug = "true" *) logic [$bits(__signal)-1:0] __name; \
+     assign __name = __signal;
+
+    `ila(fpu_operand_0, operand_a)
+    `ila(fpu_operand_1, operand_b)
+    `ila(fpu_operand_2, operand_c)
+    `ila(fpu_result, result_o)
+    `ila(fpu_valid_in, fpu_in_valid)
+    `ila(fpu_ready_in, fpu_in_ready)
+    `ila(fpu_valid_out, fpu_out_valid)
+    `ila(fpu_early_valid, fpu_early_valid_o)
+    `ila(fpu_transaction_id_out, fpu_trans_id_o)
+    `ila(fpu_status_out, fpu_status)
+    `ila(fpu_op_mod_in, fpu_op_mod)
+    `ila(fpu_operation, fpu_op)
+
     // Pack status flag into exception cause, tval ignored in wb, exception is always invalid
     assign fpu_exception_o.cause = {59'h0, fpu_status};
     assign fpu_exception_o.valid = 1'b0;
