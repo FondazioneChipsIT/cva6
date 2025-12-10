@@ -10,9 +10,9 @@
 // Zknd (AES Decryption and related instructions), Zkne (AES Encryption support, including AES rounds and key expansion steps),
 // Zknh (SHA-256 and SHA-512 hash functions for secure hashing operations).
 //
-module aes
+module cva6_aes
   import ariane_pkg::*;
-  import aes_pkg::*;
+  import cva6_aes_pkg::*;
 #(
     parameter config_pkg::cva6_cfg_t CVA6Cfg = config_pkg::cva6_cfg_empty,
     parameter type fu_data_t = logic
@@ -74,28 +74,28 @@ module aes
     if (CVA6Cfg.IS_XLEN32) begin
       assign sbox_in = fu_data_i.operand_b >> {orig_instr_aes[5:4], 3'b000};
       // AES 32-bit final round encryption by applying rotations and the forward sbox to a single byte of rs2 based on the MSB byte of the instruction itself  
-      assign aes32esi_gen = (fu_data_i.operand_a ^ ({24'b0, aes_sbox_fwd(
+      assign aes32esi_gen = (fu_data_i.operand_a ^ ({24'b0, cva6_aes_pkg::aes_sbox_fwd(
           sbox_in[7:0]
-      )} << {orig_instr_aes[5:4], 3'b000}) | ({24'b0, aes_sbox_fwd(
+      )} << {orig_instr_aes[5:4], 3'b000}) | ({24'b0, cva6_aes_pkg::aes_sbox_fwd(
           sbox_in[7:0]
       )} >> (32 - {orig_instr_aes[5:4], 3'b000})));
       // AES 32-bit middle round encryption by applying rotations, forward mix-columns and the forward sbox to a single byte of rs2 based on the MSB byte of the instruction itself
-      assign aes32esmi_gen = fu_data_i.operand_a ^ ((aes_mixcolumn_fwd(
-          {24'h000000, aes_sbox_fwd(sbox_in[7:0])}
-      ) << {orig_instr_aes[5:4], 3'b000}) | (aes_mixcolumn_fwd(
-          {24'h000000, aes_sbox_fwd(sbox_in[7:0])}
+      assign aes32esmi_gen = fu_data_i.operand_a ^ ((cva6_aes_pkg::aes_mixcolumn_fwd(
+          {24'h000000, cva6_aes_pkg::aes_sbox_fwd(sbox_in[7:0])}
+      ) << {orig_instr_aes[5:4], 3'b000}) | (cva6_aes_pkg::aes_mixcolumn_fwd(
+          {24'h000000, cva6_aes_pkg::aes_sbox_fwd(sbox_in[7:0])}
       ) >> (32 - {orig_instr_aes[5:4], 3'b000})));
       // AES 32-bit final round decryption by applying rotations and the inverse sbox to a single byte of rs2 based on the MSB byte of the instruction itself
-      assign aes32dsi_gen = (fu_data_i.operand_a ^ ({24'b0, aes_sbox_inv(
+      assign aes32dsi_gen = (fu_data_i.operand_a ^ ({24'b0, cva6_aes_pkg::aes_sbox_inv(
           sbox_in[7:0]
-      )} << {orig_instr_aes[5:4], 3'b000}) | ({24'b0, aes_sbox_inv(
+      )} << {orig_instr_aes[5:4], 3'b000}) | ({24'b0, cva6_aes_pkg::aes_sbox_inv(
           sbox_in[7:0]
       )} >> (32 - {orig_instr_aes[5:4], 3'b000})));
       // AES 32-bit middle round decryption by applying rotations, inverse mix-columns and the inverse sbox to a single byte of rs2 based on the MSB byte of the instruction itself
-      assign aes32dsmi_gen = fu_data_i.operand_a ^ ((aes_mixcolumn_inv(
-          {24'h000000, aes_sbox_inv(sbox_in[7:0])}
-      ) << {orig_instr_aes[5:4], 3'b000}) | (aes_mixcolumn_inv(
-          {24'h000000, aes_sbox_inv(sbox_in[7:0])}
+      assign aes32dsmi_gen = fu_data_i.operand_a ^ ((cva6_aes_pkg::aes_mixcolumn_inv(
+          {24'h000000, cva6_aes_pkg::aes_sbox_inv(sbox_in[7:0])}
+      ) << {orig_instr_aes[5:4], 3'b000}) | (cva6_aes_pkg::aes_mixcolumn_inv(
+          {24'h000000, cva6_aes_pkg::aes_sbox_inv(sbox_in[7:0])}
       ) >> (32 - {orig_instr_aes[5:4], 3'b000})));
       // SHA512 32-bit shifting and XORing rs1 and rs2
       assign sha512sig0h_gen = (fu_data_i.operand_a >> 1) ^ (fu_data_i.operand_a >> 7) ^ (fu_data_i.operand_a >> 8) ^ (fu_data_i.operand_b << 31) ^ (fu_data_i.operand_b << 24);
@@ -128,37 +128,37 @@ module aes
       };
       // AES 64-bit final round encryption by applying forward shift-rows and the forward sbox to each byte
       assign aes64es_gen = {
-        aes_sbox_fwd(sr[63:56]),
-        aes_sbox_fwd(sr[55:48]),
-        aes_sbox_fwd(sr[47:40]),
-        aes_sbox_fwd(sr[39:32]),
-        aes_sbox_fwd(sr[31:24]),
-        aes_sbox_fwd(sr[23:16]),
-        aes_sbox_fwd(sr[15:8]),
-        aes_sbox_fwd(sr[7:0])
+        cva6_aes_pkg::aes_sbox_fwd(sr[63:56]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[55:48]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[47:40]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[39:32]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[31:24]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[23:16]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[15:8]),
+        cva6_aes_pkg::aes_sbox_fwd(sr[7:0])
       };
       // AES 64-bit middle round encryption by applying forward shift-rows, forward sbox and forward mix-columns to all bytes
       assign aes64esm_gen = {
-        aes_mixcolumn_fwd(aes64es_gen[63:32]), aes_mixcolumn_fwd(aes64es_gen[31:0])
+        cva6_aes_pkg::aes_mixcolumn_fwd(aes64es_gen[63:32]), cva6_aes_pkg::aes_mixcolumn_fwd(aes64es_gen[31:0])
       };
       // AES 64-bit final round decryption by applying inverse shift-rows and the inverse sbox to each byte
       assign aes64ds_gen = {
-        aes_sbox_inv(sr_inv[63:56]),
-        aes_sbox_inv(sr_inv[55:48]),
-        aes_sbox_inv(sr_inv[47:40]),
-        aes_sbox_inv(sr_inv[39:32]),
-        aes_sbox_inv(sr_inv[31:24]),
-        aes_sbox_inv(sr_inv[23:16]),
-        aes_sbox_inv(sr_inv[15:8]),
-        aes_sbox_inv(sr_inv[7:0])
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[63:56]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[55:48]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[47:40]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[39:32]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[31:24]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[23:16]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[15:8]),
+        cva6_aes_pkg::aes_sbox_inv(sr_inv[7:0])
       };
       // AES 64-bit middle round decryption by applying inverse shift-rows, inverse sbox and inverse mix-columns to all bytes
       assign aes64dsm_gen = {
-        aes_mixcolumn_inv(aes64ds_gen[63:32]), aes_mixcolumn_inv(aes64ds_gen[31:0])
+        cva6_aes_pkg::aes_mixcolumn_inv(aes64ds_gen[63:32]), cva6_aes_pkg::aes_mixcolumn_inv(aes64ds_gen[31:0])
       };
       // AES 64-bit keySchedule decryption by applying inverse mix-columns on rs1 
       assign aes64im_gen = {
-        aes_mixcolumn_inv(fu_data_i.operand_a[63:32]), aes_mixcolumn_inv(fu_data_i.operand_a[31:0])
+        cva6_aes_pkg::aes_mixcolumn_inv(fu_data_i.operand_a[63:32]), cva6_aes_pkg::aes_mixcolumn_inv(fu_data_i.operand_a[31:0])
       };
       // AES Key Schedule part by XORing different slices of rs1 and rs2 
       assign aes64ks2_gen = {
@@ -166,13 +166,13 @@ module aes
         (fu_data_i.operand_a[63:32] ^ fu_data_i.operand_b[31:0])
       };
       // AES Key Schedule part by substituting round constant based on round number(from instruction), rotations and forward subword substitutions
-      assign aes64ks1i_gen = (orig_instr_aes[3:0] <= 4'hA) ? {((aes_subword_fwd(
+      assign aes64ks1i_gen = (orig_instr_aes[3:0] <= 4'hA) ? {((cva6_aes_pkg::aes_subword_fwd(
           (orig_instr_aes[3:0] == 4'hA) ? fu_data_i.operand_a[63:32] : ((fu_data_i.operand_a[63:32] >> 8) | (fu_data_i.operand_a[63:32] << 24))
-      )) ^ (aes_decode_rcon(
+      )) ^ (cva6_aes_pkg::aes_decode_rcon(
           orig_instr_aes[3:0]
-      ))), ((aes_subword_fwd(
+      ))), ((cva6_aes_pkg::aes_subword_fwd(
           (orig_instr_aes[3:0] == 4'hA) ? fu_data_i.operand_a[63:32] : ((fu_data_i.operand_a[63:32] >> 8) | (fu_data_i.operand_a[63:32] << 24))
-      )) ^ (aes_decode_rcon(
+      )) ^ (cva6_aes_pkg::aes_decode_rcon(
           orig_instr_aes[3:0]
       )))} : 64'h0;
       // SHA512 64bit rotating, shifting and XORing rs1
