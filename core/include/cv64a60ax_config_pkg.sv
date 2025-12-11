@@ -68,6 +68,7 @@ localparam config_pkg::cva6_user_cfg_t cva6_cfg = '{
    XF16: bit'(0),
    XF16ALT: bit'(0),
    XF8: bit'(0),
+   XF8ALT: bit'(0),
    RVA: bit'(1),
    RVB: bit'(1),
    ZKN: bit'(0),
