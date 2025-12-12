@@ -221,6 +221,15 @@ module commit_stage
           end
         end
         // ------------------
+        // SSP Logic
+        // ------------------
+        if (CVA6Cfg.RVZiCfiSS)
+          if (commit_instr_i[0].op == ariane_pkg::SSPUSH || commit_instr_i[0].op == ariane_pkg::SSPOPCHK) begin
+            if (!commit_drop_i[0]) begin
+              csr_op_o = commit_instr_i[0].op;
+            end
+          end
+        // ------------------
         // SFENCE.VMA Logic
         // ------------------
         // sfence.vma is idempotent so we can safely re-execute it after returning
@@ -321,7 +330,7 @@ module commit_stage
                                 && !single_step_i) begin
         // only if the first instruction didn't throw an exception and this instruction won't throw an exception
         // and the functional unit is of type ALU, LOAD, CTRL_FLOW, MULT, FPU or FPU_VEC
-        if (!commit_instr_i[1].ex.valid && (commit_instr_i[1].fu inside {ALU, LOAD, CTRL_FLOW, MULT, FPU, FPU_VEC})) begin
+        if (!commit_instr_i[1].ex.valid && (commit_instr_i[1].fu inside {ALU, LOAD, CTRL_FLOW, MULT, FPU, FPU_VEC}) && commit_instr_i[1].op != SSPOPCHK) begin
 
           if (CVA6Cfg.RVZCMP && commit_instr_i[1].is_macro_instr && commit_instr_i[1].is_last_macro_instr)
             commit_macro_ack[1] = 1'b1;

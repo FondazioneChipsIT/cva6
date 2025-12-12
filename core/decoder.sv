@@ -84,6 +84,14 @@ module decoder
     input logic tsr_i,
     // Hypervisor user mode - CSR_REGFILE
     input logic hu_i,
+    // shadow stack enable - CSR_REGFILE
+    input logic xsse_i,
+    // menv shadow stack enable - CSR REGFILE
+    input logic menv_sse_i,
+    // henv shadow stack enable - CSR REGFILE
+    input logic henv_sse_i,
+    // senv shadow stack enable - CSR REGFILE
+    input logic senv_sse_i,
     // Instruction to be added to scoreboard entry - ISSUE_STAGE
     output scoreboard_entry_t instruction_o,
     // Instruction - ISSUE_STAGE
@@ -100,6 +108,8 @@ module decoder
   logic ecall;
   // this instruction is a software break-point
   logic ebreak;
+  // this instruction is a ss ptr read, swaps the instr immediate with the ssp csr addr
+  logic ssprd;
   // this instruction needs floating-point rounding-mode verification
   logic check_fprm;
   riscv::instruction_t instr;
@@ -189,6 +199,7 @@ module decoder
     ecall                                  = 1'b0;
     ebreak                                 = 1'b0;
     check_fprm                             = 1'b0;
+    ssprd                                  = 1'b0;
     tinst                                  = 32'h0;
     control_transfer_type                  = riscv::CTR_TYPE_NONE;
     
@@ -334,18 +345,42 @@ module decoder
               endcase
             end
             3'b100: begin
-              // Hypervisor load/store instructions
-              if (CVA6Cfg.RVH) begin
-                if (instr.instr[25] != 1'b0) begin
+              if (CVA6Cfg.RVZiCfiSS && instr.itype.imm == 12'b1100_1101_1100) begin // SSPOPCHK
+                if (xsse_i) begin
+                  if (instr.itype.rs1 != '0) begin
+                    instruction_o.fu = LOAD;
+                    imm_select = IIMM;
+                    instruction_o.rs1 = instr.itype.rs1;
+                    instruction_o.rd = instr.itype.rd;
+                    instruction_o.op = ariane_pkg::SSPOPCHK;
+                  end else begin // SSRDP
+                    instruction_o.fu = CSR;
+                    ssprd = 1'b1;
+                    imm_select = IIMM;
+                    instruction_o.rs1 = instr.itype.rs1;
+                    instruction_o.rd = instr.itype.rd;
+                    instruction_o.op = ariane_pkg::CSR_READ;
+                    instruction_o.use_zimm = 1'b1;
+                  end
+                end
+              end else if (CVA6Cfg.RVZiCfiSS && instr.rtype.funct7 == 7'b110_0111) begin // SSPUSH
+                if (xsse_i) begin
+                  instruction_o.rs2 = instr.rtype.rs2;
+                  instruction_o.op = ariane_pkg::SSPUSH;
                   instruction_o.fu = STORE;
-                  imm_select = NOIMM;
-                  instruction_o.rs1 = instr.stype.rs1;
-                  instruction_o.rs2 = instr.stype.rs2;
-                end else begin
-                  instruction_o.fu = LOAD;
-                  imm_select = NOIMM;
-                  instruction_o.rs1 = instr.itype.rs1;
-                  instruction_o.rd = instr.itype.rd;
+                end
+              end else if (CVA6Cfg.RVH) begin
+                // Hypervisor load/store instructions
+                if (instr.instr[25] != 1'b0) begin
+                    instruction_o.fu = STORE;
+                    imm_select = NOIMM;
+                    instruction_o.rs1 = instr.stype.rs1;
+                    instruction_o.rs2 = instr.stype.rs2;
+                  end else begin
+                    instruction_o.fu = LOAD;
+                    imm_select = NOIMM;
+                    instruction_o.rs1 = instr.itype.rs1;
+                    instruction_o.rd = instr.itype.rd;
                 end
 
                 // Hypervisor load/store instructions when V=1 cause virtual instruction
@@ -1547,6 +1582,15 @@ module decoder
               5'h3: instruction_o.op = ariane_pkg::AMO_SCW;
               5'h4: instruction_o.op = ariane_pkg::AMO_XORW;
               5'h8: instruction_o.op = ariane_pkg::AMO_ORW;
+              6'h9: begin // detected an SSAMOSWAP
+              if (CVA6Cfg.RVZiCfiSS) begin
+                  if ((priv_lvl_i == riscv::PRIV_LVL_M && !menv_sse_i) || (!CVA6Cfg.RVS)) illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && !senv_sse_i) illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_S && CVA6Cfg.RVH && !henv_sse_i) virtual_illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && CVA6Cfg.RVH && !senv_sse_i) virtual_illegal_instr = 1'b1;
+                  else instruction_o.op = ariane_pkg::SSAMO_SWAPW;
+                end
+              end
               5'hC: instruction_o.op = ariane_pkg::AMO_ANDW;
               5'h10: instruction_o.op = ariane_pkg::AMO_MINW;
               5'h14: instruction_o.op = ariane_pkg::AMO_MAXW;
@@ -1566,6 +1610,15 @@ module decoder
               5'h3: instruction_o.op = ariane_pkg::AMO_SCD;
               5'h4: instruction_o.op = ariane_pkg::AMO_XORD;
               5'h8: instruction_o.op = ariane_pkg::AMO_ORD;
+              6'h9: begin // detected an SSAMOSWAP
+                if (CVA6Cfg.RVZiCfiSS) begin
+                  if ((priv_lvl_i == riscv::PRIV_LVL_M && !menv_sse_i) || (!CVA6Cfg.RVS)) illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && !senv_sse_i) illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_S && CVA6Cfg.RVH && !henv_sse_i) virtual_illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && CVA6Cfg.RVH && !senv_sse_i) virtual_illegal_instr = 1'b1;
+                  else instruction_o.op = ariane_pkg::SSAMO_SWAPD;
+                end
+              end
               5'hC: instruction_o.op = ariane_pkg::AMO_ANDD;
               5'h10: instruction_o.op = ariane_pkg::AMO_MIND;
               5'h14: instruction_o.op = ariane_pkg::AMO_MAXD;
@@ -1707,7 +1760,7 @@ module decoder
   // Sign extend immediate
   // --------------------------------
   always_comb begin : sign_extend
-    imm_i_type = {{CVA6Cfg.XLEN - 12{instruction_i[31]}}, instruction_i[31:20]};
+    imm_i_type = ssprd ? {{CVA6Cfg.XLEN - 12{instruction_i[31]}}, riscv::CSR_SSP} : {{CVA6Cfg.XLEN - 12{instruction_i[31]}}, instruction_i[31:20]};
     imm_s_type = {
       {CVA6Cfg.XLEN - 12{instruction_i[31]}}, instruction_i[31:25], instruction_i[11:7]
     };
