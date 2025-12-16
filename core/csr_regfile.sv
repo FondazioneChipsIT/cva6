@@ -399,7 +399,7 @@ module csr_regfile
         riscv::CSR_SSP: begin
           if(CVA6Cfg.RVZiCfiSS) begin
             if (priv_lvl_o != riscv::PRIV_LVL_M && menv_sse_q == 1'b0) read_access_exception = 1'b1;
-            else if (priv_lvl_o != riscv::PRIV_LVL_U && senv_sse_q == 1'b0) read_access_exception = 1'b1;
+            else if (priv_lvl_o == riscv::PRIV_LVL_U && senv_sse_q == 1'b0) read_access_exception = 1'b1;
               else if (CVA6Cfg.RVH) begin
                 if (priv_lvl_o == riscv::PRIV_LVL_S && henv_sse_q == 1'b0) // Read attempts in VS mode
                   virtual_read_access_exception = 1'b1;

@@ -122,6 +122,7 @@ sources:
       - core/csr_regfile.sv
       - core/ctr_unit.sv
       - core/fifo_dp_v3.sv
+      - core/sspopchk_unit.sv
       - core/decoder.sv
       - core/ex_stage.sv
       - core/acc_dispatcher.sv
