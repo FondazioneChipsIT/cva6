@@ -1715,6 +1715,7 @@ module decoder
           imm_select           = UIMM;
           instruction_o.use_pc = 1'b1;
           instruction_o.rd     = instr.utype.rd;
+          if (CVA6Cfg.RVZiCfiLP && instr.utype.rd == 'b0) instruction_o.op = ZICFI_LPAD;
         end
 
         riscv::OpcodeLui: begin

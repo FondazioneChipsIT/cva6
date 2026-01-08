@@ -120,6 +120,7 @@ package ariane_pkg;
     | riscv::SSTATUS_XS
     | riscv::SSTATUS_SUM
     | riscv::SSTATUS_MXR
+    | riscv::SSTATUS_SPELP
     | riscv::SSTATUS_UPIE
     | riscv::SSTATUS_SPIE
     | riscv::SSTATUS_UXL
@@ -128,6 +129,7 @@ package ariane_pkg;
 
   localparam logic [63:0] SMODE_STATUS_WRITE_MASK = riscv::SSTATUS_SIE
                                                     | riscv::SSTATUS_SPIE
+                                                    | riscv::SSTATUS_SPELP
                                                     | riscv::SSTATUS_SPP
                                                     | riscv::SSTATUS_FS
                                                     | riscv::SSTATUS_SUM
@@ -327,11 +329,12 @@ package ariane_pkg;
     LB,
     SB,
     LBU,
-    // Zicfiss instructions
+    // Zicfi instructions
     SSPUSH,
     SSPOPCHK,
     SSAMO_SWAPW,
     SSAMO_SWAPD,
+    ZICFI_LPAD,
     // Hypervisor Virtual-Machine Load and Store Instructions
     HLV_B,
     HLV_BU,
@@ -650,6 +653,18 @@ package ariane_pkg;
     endcase
   endfunction
   
+  // ---------------
+  // Landing Pad Unit
+  // ---------------
+
+  typedef enum logic {
+    NO_LPAD_EXPECTED = 1'b0,
+    LPAD_EXPECTED = 1'b1
+  } elp_t;
+
+  localparam LPAD_LABEL_BITS = 20;
+  typedef logic [LPAD_LABEL_BITS-1:0] lpl_t;
+
   // -------------------
   // Performance counter
   // -------------------
