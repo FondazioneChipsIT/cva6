@@ -123,6 +123,8 @@ sources:
       - core/ctr_unit.sv
       - core/fifo_dp_v3.sv
       - core/sspopchk_unit.sv
+      - core/lpad_port.sv
+      - core/lpad_unit.sv
       - core/decoder.sv
       - core/ex_stage.sv
       - core/acc_dispatcher.sv
