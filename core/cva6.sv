@@ -540,6 +540,7 @@ module cva6
   // EX <-> COMMIT
   // --------------
   // CSR Commit
+  logic [CVA6Cfg.XLEN-1:0] ssp;
   logic csr_commit_commit_ex;
   logic dirty_fp_state;
   logic dirty_v_state;
@@ -564,7 +565,10 @@ module cva6
   scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_id_commit;
   logic [CVA6Cfg.NrCommitPorts-1:0] commit_drop_id_commit;
   logic [CVA6Cfg.NrCommitPorts-1:0] commit_ack_commit_id;
-
+  // --------------
+  // ID <-> EX
+  // --------------
+  logic xsse;
   // --------------
   // RVFI
   // --------------
@@ -597,8 +601,10 @@ module cva6
   logic mxr_csr_ex;
   logic vmxr_csr_ex;
   logic [CVA6Cfg.PPNW-1:0] satp_ppn_csr_ex;
+  logic [CVA6Cfg.ModeW-1:0] satp_mode_csr_ex;
   logic [CVA6Cfg.ASID_WIDTH-1:0] asid_csr_ex;
   logic [CVA6Cfg.PPNW-1:0] vsatp_ppn_csr_ex;
+  logic [CVA6Cfg.ModeW-1:0] vsatp_mode_csr_ex;
   logic [CVA6Cfg.ASID_WIDTH-1:0] vs_asid_csr_ex;
   logic [CVA6Cfg.PPNW-1:0] hgatp_ppn_csr_ex;
   logic [CVA6Cfg.VMID_WIDTH-1:0] vmid_csr_ex;
@@ -622,6 +628,8 @@ module cva6
   riscv::pmpcfg_t [avoid_neg(CVA6Cfg.NrPMPEntries-1):0] pmpcfg;
   logic [avoid_neg(CVA6Cfg.NrPMPEntries-1):0][CVA6Cfg.PLEN-3:0] pmpaddr;
   logic [31:0] mcountinhibit_csr_perf;
+  logic menv_sse, henv_sse, senv_sse;
+  logic ss_testmode;
   //jvt
   jvt_t jvt;
   // ----------------------------
@@ -797,6 +805,11 @@ module cva6
       .compressed_valid_o(x_compressed_valid),
       .compressed_req_o  (x_compressed_req),
       .jvt_i             (jvt),
+      .menv_sse_i        (menv_sse),
+      .henv_sse_i        (henv_sse),
+      .senv_sse_i        (senv_sse),
+      .xsse_o            (xsse),
+      .ss_testmode_i     (ss_testmode),
       // DCACHE interfaces
       .dcache_req_ports_i(dcache_req_ports_cache_id),
       .dcache_req_ports_o(dcache_req_ports_id_cache)
@@ -929,6 +942,7 @@ module cva6
       .alu2_valid_o            (alu2_valid_id_ex),
       // CSR
       .csr_valid_o             (csr_valid_id_ex),
+      .ssp_i                   (ssp),
       // CVXIF
       .xfu_valid_o             (x_issue_valid_id_ex),
       .xfu_ready_i             (x_issue_ready_ex_id),
@@ -1104,8 +1118,10 @@ module cva6
       .mxr_i                   (mxr_csr_ex),                     // from CSR
       .vmxr_i                  (vmxr_csr_ex),                    // from CSR
       .satp_ppn_i              (satp_ppn_csr_ex),                // from CSR
+      .satp_mode_i             (satp_mode_csr_ex),               // from CSR
       .asid_i                  (asid_csr_ex),                    // from CSR
       .vsatp_ppn_i             (vsatp_ppn_csr_ex),               // from CSR
+      .vsatp_mode_i            (vsatp_mode_csr_ex),              // from CSR
       .vs_asid_i               (vs_asid_csr_ex),                 // from CSR
       .hgatp_ppn_i             (hgatp_ppn_csr_ex),               // from CSR
       .vmid_i                  (vmid_csr_ex),                    // from CSR
@@ -1121,7 +1137,9 @@ module cva6
       .pmpaddr_i               (pmpaddr),
       //RVFI
       .rvfi_lsu_ctrl_o         (rvfi_lsu_ctrl),
-      .rvfi_mem_paddr_o        (rvfi_mem_paddr)
+      .rvfi_mem_paddr_o        (rvfi_mem_paddr),
+      // CFI
+      .xsse_i                  (xsse)
   );
 
   // ---------
@@ -1232,8 +1250,10 @@ module cva6
       .mxr_o                   (mxr_csr_ex),
       .vmxr_o                  (vmxr_csr_ex),
       .satp_ppn_o              (satp_ppn_csr_ex),
+      .satp_mode_o             (satp_mode_csr_ex),
       .asid_o                  (asid_csr_ex),
       .vsatp_ppn_o             (vsatp_ppn_csr_ex),
+      .vsatp_mode_o            (vsatp_mode_csr_ex),
       .vs_asid_o               (vs_asid_csr_ex),
       .hgatp_ppn_o             (hgatp_ppn_csr_ex),
       .vmid_o                  (vmid_csr_ex),
@@ -1258,6 +1278,11 @@ module cva6
       .pmpcfg_o                (pmpcfg),
       .pmpaddr_o               (pmpaddr),
       .mcountinhibit_o         (mcountinhibit_csr_perf),
+      .menv_sse_o              (menv_sse),
+      .henv_sse_o              (henv_sse),
+      .senv_sse_o              (senv_sse),
+      .ssp_o                   (ssp),
+      .ss_testmode_o           (ss_testmode),
       .jvt_o                   (jvt),
       //RVFI
       .rvfi_csr_o              (rvfi_csr)

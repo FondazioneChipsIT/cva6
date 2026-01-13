@@ -101,7 +101,9 @@ module cva6_mmu
     // PMP
 
     input riscv::pmpcfg_t [avoid_neg(CVA6Cfg.NrPMPEntries-1):0]                   pmpcfg_i,
-    input logic           [avoid_neg(CVA6Cfg.NrPMPEntries-1):0][CVA6Cfg.PLEN-3:0] pmpaddr_i
+    input logic           [avoid_neg(CVA6Cfg.NrPMPEntries-1):0][CVA6Cfg.PLEN-3:0] pmpaddr_i,
+
+    input logic instr_is_ss_i  // the translation is requested by a shadow stack writeinstr
 );
 
   // memory management, pte for cva6
@@ -349,7 +351,9 @@ module cva6_mmu
       .pmpcfg_i   (pmpcfg_i),
       .pmpaddr_i  (pmpaddr_i),
       .bad_paddr_o(ptw_bad_paddr),
-      .bad_gpaddr_o(ptw_bad_gpaddr)
+      .bad_gpaddr_o(ptw_bad_gpaddr),
+
+      .instr_is_ss_i
   );
 
   //-----------------------

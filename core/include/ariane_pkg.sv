@@ -327,6 +327,11 @@ package ariane_pkg;
     LB,
     SB,
     LBU,
+    // Zicfiss instructions
+    SSPUSH,
+    SSPOPCHK,
+    SSAMO_SWAPW,
+    SSAMO_SWAPD,
     // Hypervisor Virtual-Machine Load and Store Instructions
     HLV_B,
     HLV_BU,
@@ -634,6 +639,17 @@ package ariane_pkg;
     endcase
   endfunction
 
+  function automatic logic is_ss(fu_op op);
+    case (op) inside
+      SSPUSH,
+      SSAMO_SWAPD,
+      SSAMO_SWAPW: begin
+        return 1'b1;
+      end
+      default: return 1'b0;
+    endcase
+  endfunction
+  
   // -------------------
   // Performance counter
   // -------------------
