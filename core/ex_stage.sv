@@ -759,7 +759,7 @@ module ex_stage
   // Shadow Stack Pop Check Unit (SSPCU)
   //------------------------------------
   generate
-    if (CVA6Cfg.RVZiCfiSS) begin : sspopchk_unit_gen
+    if (CVA6Cfg.RVZiCfiSS) begin : gen_sspopchk_unit
       sspopchk_unit #(
         .CVA6Cfg     (CVA6Cfg),
         .fu_data_t   (fu_data_t),
@@ -776,7 +776,7 @@ module ex_stage
         .xsse_i,
         .load_exception_o
       );
-    end else begin : no_sspopchk_unit_gen
+    end else begin : gen_no_sspopchk_unit
       assign load_exception_o = ld_ex;
     end
   endgenerate

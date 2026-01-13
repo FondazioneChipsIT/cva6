@@ -164,15 +164,15 @@ module id_stage #(
   always_comb begin
     if (priv_lvl_i == riscv::PRIV_LVL_M && !ss_testmode_i) xsse_o = 1'b0;
     else if (priv_lvl_i == riscv::PRIV_LVL_M && ss_testmode_i) xsse_o = 1'b1; 
-      else begin
-        if (priv_lvl_i == riscv::PRIV_LVL_S || priv_lvl_i == riscv::PRIV_LVL_HS)
-          xsse_o = menv_sse_i;
-        else if (CVA6Cfg.RVH && priv_lvl_i == riscv::PRIV_LVL_S && v_i)
-          xsse_o = henv_sse_i;
-        else if (priv_lvl_i == riscv::PRIV_LVL_U)
-          xsse_o = senv_sse_i;
-        else xsse_o = 1'b0;
-      end
+    else begin
+      if (priv_lvl_i == riscv::PRIV_LVL_S || priv_lvl_i == riscv::PRIV_LVL_HS)
+        xsse_o = menv_sse_i;
+      else if (CVA6Cfg.RVH && priv_lvl_i == riscv::PRIV_LVL_S && v_i)
+        xsse_o = henv_sse_i;
+      else if (priv_lvl_i == riscv::PRIV_LVL_U)
+        xsse_o = senv_sse_i;
+      else xsse_o = 1'b0;
+    end
   end
 
   if (CVA6Cfg.RVC) begin
