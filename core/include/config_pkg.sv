@@ -88,6 +88,10 @@ package config_pkg;
     bit                          RVZicntr;
     // Zihpm RISC-V extension
     bit                          RVZihpm;
+    // Shadow stack extension
+    bit                          RVZiCfiSS;
+    // Landing pad extension
+    bit                          RVZiCfiLP;
     // Floating Point
     bit                          RVF;
     // Floating Point
@@ -293,6 +297,8 @@ package config_pkg;
     bit          RVZiCond;
     bit          RVZicntr;
     bit          RVZihpm;
+    bit          RVZiCfiSS;
+    bit          RVZiCfiLP;
 
     int unsigned NR_SB_ENTRIES;
     int unsigned TRANS_ID_BITS;

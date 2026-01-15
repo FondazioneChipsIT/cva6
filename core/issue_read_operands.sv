@@ -94,6 +94,8 @@ module issue_read_operands
     output logic [CVA6Cfg.NrIssuePorts-1:0] alu2_valid_o,
     // CSR is valid - EX_STAGE
     output logic [CVA6Cfg.NrIssuePorts-1:0] csr_valid_o,
+    // CSR Shadow Stack Pointer
+    input [CVA6Cfg.XLEN-1:0] ssp_i,
     // CVXIF FU is valid - EX_STAGE
     output logic [CVA6Cfg.NrIssuePorts-1:0] cvxif_valid_o,
     // CVXIF is FU ready - EX_STAGE
@@ -721,6 +723,20 @@ module issue_read_operands
         };
       end
 
+      if (CVA6Cfg.RVZiCfiSS) begin
+        // shadow stack push ongoing
+        if (issue_instr_i[i].op == ariane_pkg::SSPUSH) begin
+          fu_data_n[i].operand_a = ssp_i - (CVA6Cfg.XLEN >> 3);
+        end
+
+        // shadow stack popcheck ongoing
+        if (issue_instr_i[i].op == ariane_pkg::SSPOPCHK) begin
+          fu_data_n[i].operand_a = ssp_i;
+          fu_data_n[i].operand_b = forward_rs1[i] ? rs1_res[i] : operand_a_regfile[i];
+          fu_data_n[i].imm       = '0;
+        end
+      end
+
       // use the zimm as operand a
       if (issue_instr_i[i].use_zimm) begin
         // zero extend operand a
@@ -728,7 +744,7 @@ module issue_read_operands
       end
       // or is it an immediate (including PC), this is not the case for a store, control flow, and accelerator instructions
       // also make sure operand B is not already used as an FP operand
-      if (issue_instr_i[i].use_imm && (issue_instr_i[i].fu != STORE) && (issue_instr_i[i].fu != CTRL_FLOW) && (issue_instr_i[i].fu != ACCEL) && !(CVA6Cfg.FpPresent && is_rs2_fpr(
+      if (issue_instr_i[i].use_imm && (issue_instr_i[i].fu != STORE) && (issue_instr_i[i].op != ariane_pkg::SSPOPCHK) && (issue_instr_i[i].fu != CTRL_FLOW) && (issue_instr_i[i].fu != ACCEL) && !(CVA6Cfg.FpPresent && is_rs2_fpr(
               issue_instr_i[i].op
           ))) begin
         fu_data_n[i].operand_b = issue_instr_i[i].result;

@@ -121,6 +121,17 @@ package riscv;
   } mstatus_rv_t;
 
   typedef struct packed {
+    logic [63:11] wpri1;  // writes preserved reads ignored
+    logic         mlpe;   // enable Zicfilp in M-mode
+    logic         sseed;  // not implemented - requires Zkr extension
+    logic         useed;  // not implemented - requires Zkr extension
+    logic [7:3]   wpri0;  // writes preserved reads ignored
+    logic         rlb;    // not implemented - requires Smepmp extension
+    logic         mmwp;   // not implemented - requires Smepmp extension
+    logic         mml;    // not implemented - requires Smepmp extension
+  } mseccfg_t;
+
+  typedef struct packed {
     logic        stce;   // not implemented - requires Sctc extension
     logic        pbmte;  // not implemented - requires Svpbmt extension
     logic [61:8] wpri1;  // writes preserved reads ignored
@@ -128,6 +139,8 @@ package riscv;
     logic        cbcfe;  // not implemented - requires Zicbom extension
     logic [1:0]  cbie;   // not implemented - requires Zicbom extension
     logic [2:0]  wpri0;  // writes preserved reads ignored
+    logic        sse;    // enable Zicfiss in less priviledged modes
+    logic        lpe;    // enable Zicfilp in less priviledged modes
     logic        fiom;   // fence of I/O implies memory
   } envcfg_rv_t;
 
@@ -341,6 +354,7 @@ package riscv;
   localparam logic [XLEN-1:0] INSTR_PAGE_FAULT = 12;  // Instruction page fault
   localparam logic [XLEN-1:0] LOAD_PAGE_FAULT = 13;  // Load page fault
   localparam logic [XLEN-1:0] STORE_PAGE_FAULT = 15;  // Store page fault
+  localparam logic [XLEN-1:0] SOFTWARE_CHECK = 18;  // Software Check exception
   localparam logic [XLEN-1:0] INSTR_GUEST_PAGE_FAULT = 20;  // Instruction guest-page fault
   localparam logic [XLEN-1:0] LOAD_GUEST_PAGE_FAULT = 21;  // Load guest-page fault
   localparam logic [XLEN-1:0] VIRTUAL_INSTRUCTION = 22;  // virtual instruction
@@ -573,6 +587,8 @@ package riscv;
     CSR_MCYCLEH          = 12'hB80,
     CSR_MINSTRET         = 12'hB02,
     CSR_MINSTRETH        = 12'hB82,
+    CSR_MSECCFG          = 12'h747,
+    CSR_MSECCFGH         = 12'h757,
     //Performance Counters
     CSR_MHPM_COUNTER_3   = 12'hB03,
     CSR_MHPM_COUNTER_4   = 12'hB04,
@@ -648,6 +664,10 @@ package riscv;
     CSR_DPC              = 12'h7b1,
     CSR_DSCRATCH0        = 12'h7b2,  // optional
     CSR_DSCRATCH1        = 12'h7b3,  // optional
+    // Control-Flow Integrity - Zicfiss
+    CSR_SSP              = 12'h011,
+    // Shadow Stack test mode
+    CSR_SS_TESTMODE      = 12'hCA0,
     // Counters and Timers from Zicntr extension (User Mode - R/O Shadows)
     CSR_CYCLE            = 12'hC00,
     CSR_CYCLEH           = 12'hC80,
@@ -724,6 +744,7 @@ package riscv;
   localparam logic [63:0] SSTATUS_XS = 'h00018000;
   localparam logic [63:0] SSTATUS_SUM = 'h00040000;
   localparam logic [63:0] SSTATUS_MXR = 'h00080000;
+  localparam logic [63:0] SSTATUS_SPELP = 'h00800000;
   localparam logic [63:0] SSTATUS_UPIE = 'h00000010;
   localparam logic [63:0] SSTATUS_UXL = 64'h0000000300000000;
   // CSR Bit Implementation Masks
@@ -762,6 +783,7 @@ package riscv;
   localparam logic [63:0] MSTATUS_TVM = 'h00100000;
   localparam logic [63:0] MSTATUS_TW = 'h00200000;
   localparam logic [63:0] MSTATUS_TSR = 'h00400000;
+  localparam logic [63:0] MSTATUS_MPELP = 'h0000020000000000;
   function automatic logic [63:0] mstatus_uxl(logic IS_XLEN64);
     return {30'h0000000, IS_XLEN64, IS_XLEN64, 32'h00000000};
   endfunction
@@ -773,6 +795,8 @@ package riscv;
   endfunction
 
   localparam logic [63:0] MENVCFG_FIOM = 'h00000001;
+  localparam logic [63:0] MENVCFG_LPE = 'h00000004;
+  localparam logic [63:0] MENVCFG_SSE = 'h00000008;
   localparam logic [63:0] MENVCFG_CBIE = 'h00000030;
   localparam logic [63:0] MENVCFG_CBFE = 'h00000040;
   localparam logic [63:0] MENVCFG_CBZE = 'h00000080;
@@ -846,6 +870,7 @@ package riscv;
   typedef struct packed {
     logic [31:28] xdebugver;
     logic [27:18] zero2;
+    logic         pelp;
     logic         ebreakvs;
     logic         ebreakvu;
     logic         ebreakm;
