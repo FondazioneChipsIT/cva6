@@ -398,6 +398,12 @@ module alu
         default: ;  // default case to suppress unique warning
       endcase
     end
+    if (CVA6Cfg.RVZiCfiLP) begin
+      unique case (fu_data_i.operation)
+        ZICFI_LPAD: result_o = fu_data_i.operand_b;  // put landing pad label as result
+        default: ;
+      endcase
+    end
     // ZKN instructions
     if (CVA6Cfg.ZKN && CVA6Cfg.RVB) begin
       unique case (fu_data_i.operation)

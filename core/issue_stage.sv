@@ -100,6 +100,8 @@ module issue_stage
     output logic [CVA6Cfg.NrIssuePorts-1:0] alu2_valid_o,
     // CSR is valid - EX_STAGE
     output logic [CVA6Cfg.NrIssuePorts-1:0] csr_valid_o,
+    // CSR shadow stack pointer - EX STAGE
+    input logic [CVA6Cfg.XLEN-1:0] ssp_i,
     // CVXIF FU is valid - EX_STAGE
     output logic [CVA6Cfg.NrIssuePorts-1:0] xfu_valid_o,
     // CVXIF is FU ready - EX_STAGE
@@ -290,6 +292,7 @@ module issue_stage
       .fpu_early_valid_i,
       .alu2_valid_o,
       .csr_valid_o,
+      .ssp_i,
       .cvxif_valid_o           (xfu_valid_o),
       .cvxif_ready_i           (xfu_ready_i),
       .cvxif_off_instr_o       (x_off_instr_o),

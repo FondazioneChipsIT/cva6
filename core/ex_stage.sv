@@ -207,9 +207,13 @@ module ex_stage
     // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.PPNW-1:0] satp_ppn_i,
     // TO_BE_COMPLETED - CSR_REGFILE
+    input logic [CVA6Cfg.ModeW-1:0] satp_mode_i,
+    // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.ASID_WIDTH-1:0] asid_i,
     // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.PPNW-1:0] vsatp_ppn_i,
+    // TO_BE_COMPLETED - CSR_REGFILE
+    input logic [CVA6Cfg.ModeW-1:0] vsatp_mode_i,
     // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.ASID_WIDTH-1:0] vs_asid_i,
     // TO_BE_COMPLETED - CSR_REGFILE
@@ -244,6 +248,8 @@ module ex_stage
     output lsu_ctrl_t rvfi_lsu_ctrl_o,
     // Information dedicated to RVFI - RVFI
     output [CVA6Cfg.PLEN-1:0] rvfi_mem_paddr_o,
+    // Shadow Stack Enabled state
+    input logic xsse_i,
     // Original instruction AES bits
     input logic [5:0] orig_instr_aes_i
 );
@@ -272,6 +278,7 @@ module ex_stage
   logic current_instruction_is_sfence_vma;
   logic current_instruction_is_hfence_vvma;
   logic current_instruction_is_hfence_gvma;
+  exception_t ld_ex;
   // These two register store the rs1 and rs2 parameters in case of `SFENCE_VMA`
   // instruction to be used for TLB flush in the next clock cycle.
   logic [CVA6Cfg.VMID_WIDTH-1:0] vmid_to_be_flushed;
@@ -550,7 +557,7 @@ module ex_stage
       .load_trans_id_o,
       .load_result_o,
       .load_valid_o,
-      .load_exception_o,
+      .load_exception_o      (ld_ex),
       .store_trans_id_o,
       .store_result_o,
       .store_valid_o,
@@ -578,7 +585,9 @@ module ex_stage
       .mxr_i,
       .vmxr_i,
       .satp_ppn_i,
+      .satp_mode_i,
       .vsatp_ppn_i,
+      .vsatp_mode_i,
       .hgatp_ppn_i,
       .asid_i,
       .vs_asid_i,
@@ -743,6 +752,32 @@ module ex_stage
       );
     end else begin : no_aes_gen
       assign aes_result = '0;
+    end
+  endgenerate
+
+  //-------------------------------------
+  // Shadow Stack Pop Check Unit (SSPCU)
+  //------------------------------------
+  generate
+    if (CVA6Cfg.RVZiCfiSS) begin : gen_sspopchk_unit
+      sspopchk_unit #(
+          .CVA6Cfg    (CVA6Cfg),
+          .fu_data_t  (fu_data_t),
+          .exception_t(exception_t)
+      ) sspopchk_unit_i (
+          .clk_i,
+          .rst_ni,
+          .fu_data_i,
+          .lsu_valid_i,
+          .load_trans_id_i(load_trans_id_o),
+          .load_valid_i   (load_valid_o),
+          .load_result_i  (load_result_o),
+          .ld_ex_i        (ld_ex),
+          .xsse_i,
+          .load_exception_o
+      );
+    end else begin : gen_no_sspopchk_unit
+      assign load_exception_o = ld_ex;
     end
   endgenerate
 
