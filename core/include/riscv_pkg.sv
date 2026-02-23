@@ -935,12 +935,13 @@ package riscv;
   } ctr_type_t;
 
   typedef struct packed {
-    logic [63:32] wpri1;
-    logic [31:16] cc;
-    logic         ccv;
-    logic [14:4]  wpri0;
-    ctr_type_t    cftype;
-  } ctrdata_rv_t;
+    logic [XLEN-1:0]  ctr_source;
+    logic [XLEN-1:0]  ctr_target;
+    riscv::ctr_type_t ctr_type;
+    logic [31:0]      ctr_instr;
+    riscv::priv_lvl_t priv_lvl;
+    logic             valid;
+  } ctr_port_t;
 
   // Instruction Generation *incomplete*
   function automatic logic [31:0] jal(logic [4:0] rd, logic [20:0] imm);
