@@ -340,7 +340,9 @@ module cva6
     // noc response, can be AXI or OpenPiton - SUBSYSTEM
     input noc_resp_t noc_resp_i,
     // Committing instructions - CFI SNOOPER
-    output riscv::ctr_port_t [CVA6Cfg.NrCommitPorts-1:0] ctr_commit_o
+    output riscv::ctr_port_t [CVA6Cfg.NrCommitPorts-1:0] ctr_commit_o,
+    // Halt request from snooper
+    input logic snooper_halt_i
 );
 
   localparam type interrupts_t = struct packed {
@@ -644,6 +646,7 @@ module cva6
   logic halt_ctrl;
   logic halt_frontend;
   logic halt_csr_ctrl;
+  logic halt_req_ctrl;
   logic dcache_flush_ctrl_cache;
   logic dcache_flush_ack_cache_ctrl;
   logic set_debug_pc;
@@ -1329,6 +1332,8 @@ module cva6
     assign data_perf_csr = '0;
   end : gen_no_perf_counter
 
+  assign halt_req_ctrl = halt_csr_ctrl | snooper_halt_i;
+
   // ------------
   // Controller
   // ------------
@@ -1353,7 +1358,7 @@ module cva6
       .flush_tlb_o           (flush_tlb_ctrl_ex),
       .flush_tlb_vvma_o      (flush_tlb_vvma_ctrl_ex),
       .flush_tlb_gvma_o      (flush_tlb_gvma_ctrl_ex),
-      .halt_csr_i            (halt_csr_ctrl),
+      .halt_csr_i            (halt_req_ctrl),
       .halt_acc_i            (halt_acc_ctrl),
       .halt_frontend_o       (halt_frontend),
       .halt_o                (halt_ctrl),
