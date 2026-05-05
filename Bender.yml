@@ -209,6 +209,7 @@ sources:
       - core/cache_subsystem/hpdcache/rtl/src/hpdcache_ctrl.sv
       - core/cache_subsystem/hpdcache/rtl/src/hpdcache_ctrl_pe.sv
       - core/cache_subsystem/hpdcache/rtl/src/hpdcache_memctrl.sv
+      - core/cache_subsystem/hpdcache/rtl/src/hpdcache_memwrap.sv
       - core/cache_subsystem/hpdcache/rtl/src/hpdcache_miss_handler.sv
       - core/cache_subsystem/hpdcache/rtl/src/hpdcache_mshr.sv
       - core/cache_subsystem/hpdcache/rtl/src/hpdcache_rtab.sv
