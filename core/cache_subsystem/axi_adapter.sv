@@ -24,8 +24,8 @@ module axi_adapter #(
     parameter type axi_req_t = logic,
     parameter type axi_rsp_t = logic
 ) (
-    input logic clk_i,  // Clock
-    input logic rst_ni, // Asynchronous reset active low
+    input logic clk_i,   // Clock
+    input logic rst_ni,  // Asynchronous reset active low
     input logic clear_i, // Synchronous clear active high
 
     input logic req_i,

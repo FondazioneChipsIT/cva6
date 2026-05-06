@@ -721,8 +721,8 @@ module axi_adapter_arbiter #(
     parameter type req_t = std_cache_pkg::bypass_req_t,
     parameter type rsp_t = std_cache_pkg::bypass_rsp_t
 ) (
-    input  logic                clk_i,   // Clock
-    input  logic                rst_ni,  // Asynchronous reset active low
+    input  logic                clk_i,    // Clock
+    input  logic                rst_ni,   // Asynchronous reset active low
     input  logic                clear_i,  // Synchronous clear active high
     // Master ports
     input  req_t [NR_PORTS-1:0] req_i,

@@ -59,8 +59,8 @@ module wt_dcache_wbuffer
     parameter type dcache_req_o_t = logic,
     parameter type wbuffer_t = logic
 ) (
-    input logic clk_i,  // Clock
-    input logic rst_ni, // Asynchronous reset active low
+    input logic clk_i,   // Clock
+    input logic rst_ni,  // Asynchronous reset active low
     input logic clear_i, // Synchronous clear active high
 
     input logic cache_en_i,  // writes are treated as NC if disabled
