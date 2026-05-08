@@ -17,6 +17,7 @@ dependencies:
 export_include_dirs:
   - core/include
   - core/cache_subsystem/hpdcache/rtl/include
+  - core/cache_subsystem/hpdcache/rtl/src/utils/ecc
 
 sources:
   - include_dirs:
@@ -94,6 +95,7 @@ sources:
           - core/cva6_mmu/cva6_ptw.sv
 
       # Packages
+      - core/include/dummy_l15_pkg.sv
       - core/include/wt_cache_pkg.sv
       - core/include/std_cache_pkg.sv
       - core/include/aes_pkg.sv
