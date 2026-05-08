@@ -813,7 +813,7 @@ module issue_read_operands
       alu2_valid_q   <= '0;
       csr_valid_q    <= '0;
       branch_valid_q <= '0;
-    end else begin // if (!rst_ni)
+    end else begin
       if (clear_i) begin
         alu_valid_q    <= '0;
         aes_valid_q    <= '0;

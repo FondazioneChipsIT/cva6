@@ -27,8 +27,8 @@ module wt_dcache
     // note that the write buffer uses all IDs up to DCACHE_MAX_TX-1 for write transactions
     parameter logic [CVA6Cfg.MEM_TID_WIDTH-1:0] RdAmoTxId = 1
 ) (
-    input logic clk_i,  // Clock
-    input logic rst_ni, // Asynchronous reset active low
+    input logic clk_i,   // Clock
+    input logic rst_ni,  // Asynchronous reset active low
     input logic clear_i, // Synchronous clear active high
 
     // Cache management

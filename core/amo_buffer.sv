@@ -17,10 +17,10 @@
 module amo_buffer #(
     parameter config_pkg::cva6_cfg_t CVA6Cfg = config_pkg::cva6_cfg_empty
 ) (
-    input logic clk_i,   // Clock
-    input logic rst_ni,  // Asynchronous reset active low
+    input logic clk_i,    // Clock
+    input logic rst_ni,   // Asynchronous reset active low
     input logic clear_i,  // Synchronous clear active high
-    input logic flush_i, // pipeline flush
+    input logic flush_i,  // pipeline flush
 
     input logic valid_i,  // AMO is valid
     output logic ready_o,  // AMO unit is ready
@@ -74,7 +74,7 @@ module amo_buffer #(
       .testmode_i(1'b0),
       .full_o    (amo_valid),
       .empty_o   (ready_o),
-      .usage_o   (),                  // left open
+      .usage_o   (),                            // left open
       .data_i    (amo_data_in),
       .push_i    (valid_i),
       .data_o    (amo_data_out),

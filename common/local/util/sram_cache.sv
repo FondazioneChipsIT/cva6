@@ -107,7 +107,8 @@ module sram_cache #(
           .USER_WIDTH (USER_WIDTH),
           .DATA_WIDTH (DATA_WIDTH),
           .USER_EN    (USER_EN),
-          .NUM_WORDS  (NUM_WORDS)
+          .NUM_WORDS  (NUM_WORDS),
+          .SIM_INIT   (SIM_INIT)
       ) data_sram (
           .clk_i  (clk_i),
           .rst_ni (rst_ni),

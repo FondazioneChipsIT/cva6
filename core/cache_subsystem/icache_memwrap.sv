@@ -29,7 +29,8 @@ module icache_memwrap #(
         .DATA_WIDTH (CVA6Cfg.ICACHE_TAG_WIDTH + 1),
         .BYTE_ACCESS(0),
         .TECHNO_CUT (CVA6Cfg.TechnoCut),
-        .NUM_WORDS  (ICACHE_NUM_WORDS)
+        .NUM_WORDS  (ICACHE_NUM_WORDS),
+        .SIM_INIT   ("random")
     ) tag_sram (
         .clk_i  (clk_i),
         .rst_ni (rst_ni),
@@ -50,7 +51,8 @@ module icache_memwrap #(
         .USER_EN    (CVA6Cfg.FETCH_USER_EN),
         .BYTE_ACCESS(0),
         .TECHNO_CUT (CVA6Cfg.TechnoCut),
-        .NUM_WORDS  (ICACHE_NUM_WORDS)
+        .NUM_WORDS  (ICACHE_NUM_WORDS),
+        .SIM_INIT   ("random")
     ) data_sram (
         .clk_i  (clk_i),
         .rst_ni (rst_ni),
