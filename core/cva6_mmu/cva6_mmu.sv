@@ -103,7 +103,8 @@ module cva6_mmu
     input riscv::pmpcfg_t [avoid_neg(CVA6Cfg.NrPMPEntries-1):0]                   pmpcfg_i,
     input logic           [avoid_neg(CVA6Cfg.NrPMPEntries-1):0][CVA6Cfg.PLEN-3:0] pmpaddr_i,
 
-    input logic instr_is_ss_i  // the translation is requested by a shadow stack writeinstr
+    input logic instr_is_ss_i,  // the translation is requested by a shadow stack writeinstr
+    input amo_req_t amo_req_i
 );
 
   // memory management, pte for cva6
@@ -169,12 +170,16 @@ module cva6_mmu
   logic shared_tlb_access, shared_tlb_miss;
   logic shared_tlb_hit, itlb_req;
 
+  logic amo_is_store;
+
   // Assignments
 
   assign itlb_lu_access = icache_areq_i.fetch_req;
   assign dtlb_lu_access = lsu_req_i & !misaligned_ex_i.valid;
   assign itlb_lu_asid   = v_i ? vs_asid_i : asid_i;
   assign dtlb_lu_asid   = (ld_st_v_i || flush_tlb_vvma_i) ? vs_asid_i : asid_i;
+
+  assign amo_is_store = amo_req_i.amo_op == (AMO_SWAPW || AMO_SWAPD || AMO_SCW || AMO_SCD);
 
 
   cva6_tlb #(
@@ -353,7 +358,8 @@ module cva6_mmu
       .bad_paddr_o(ptw_bad_paddr),
       .bad_gpaddr_o(ptw_bad_gpaddr),
 
-      .instr_is_ss_i
+      .instr_is_ss_i,
+      .amo_is_store_i(amo_is_store)
   );
 
   //-----------------------
@@ -612,7 +618,7 @@ module cva6_mmu
           // this is a load
         end else begin
           if (CVA6Cfg.RVH && d_g_st_access_err) begin
-            lsu_exception_o.cause = riscv::LOAD_GUEST_PAGE_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
@@ -625,7 +631,7 @@ module cva6_mmu
             end
             // check for sufficient access privileges - throw a page fault if necessary
           end else if (daccess_err || canonical_addr_check) begin
-            lsu_exception_o.cause = riscv::LOAD_PAGE_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
@@ -717,7 +723,7 @@ module cva6_mmu
               };
           end else begin
             // the page table walker can only throw page faults
-            lsu_exception_o.cause = riscv::LD_ACCESS_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::ST_ACCESS_FAULT : riscv::LD_ACCESS_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {

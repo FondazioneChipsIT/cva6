@@ -88,7 +88,8 @@ module cva6_ptw
     output logic [CVA6Cfg.PLEN-1:0] bad_paddr_o,
     output logic [CVA6Cfg.GPLEN-1:0] bad_gpaddr_o,
     // Zicfiss
-    input logic instr_is_ss_i
+    input logic instr_is_ss_i,
+    input logic amo_is_store_i
 );
 
   // input registers
@@ -408,10 +409,10 @@ module cva6_ptw
           // Invalid PTE
           // -------------
           // If pte.v = 0, or if pte.r = 0 and pte.w = 1, stop and raise a page-fault exception. if the instr is not ss
-          if (!pte.v || (!pte.r && pte.w && !instr_is_ss_i && lsu_is_store_i) || (instr_is_ss_i && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
+          if (!pte.v || (!pte.r && pte.w && !instr_is_ss_i && lsu_is_store_i) || ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
             state_d = PROPAGATE_ERROR;
-          // if shadow stack access and the accessed page is not SS (r = 0, w = 1, x = 1) or read-only (r = 1, w = 0, x = 0) raise access-fault exception
-          else if ((instr_is_ss_i && !(!pte.r && pte.w && !pte.x)) || (!instr_is_ss_i && lsu_is_store_i && !pte.r && pte.w && !pte.x) || (instr_is_ss_i && !(pte.r && !pte.w && !pte.x)))
+          // if shadow stack access and the accessed page is not SS (r = 0, w = 1, x = 0) or read-only (r = 1, w = 0, x = 0) raise access-fault exception
+          else if (((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && !(!pte.r && pte.w && !pte.x)) || (!instr_is_ss_i && lsu_is_store_i && amo_is_store_i && !pte.r && pte.w && !pte.x))
             state_d = PROPAGATE_ACCESS_ERROR;
           // -----------
           // Valid PTE

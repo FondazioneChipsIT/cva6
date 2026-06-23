@@ -327,7 +327,8 @@ module load_store_unit
         .pmpcfg_i,
         .pmpaddr_i,
         // ZiCfiss ext.
-        .instr_is_ss_i(instr_is_ss)
+        .instr_is_ss_i(instr_is_ss),
+        .amo_req_i(amo_req_o)
     );
   end else begin : gen_no_mmu
     // icache request without MMU, virtual and physical address are identical
