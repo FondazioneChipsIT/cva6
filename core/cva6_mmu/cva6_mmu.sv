@@ -618,7 +618,7 @@ module cva6_mmu
           // this is a load
         end else begin
           if (CVA6Cfg.RVH && d_g_st_access_err) begin
-            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_GUEST_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
@@ -684,7 +684,7 @@ module cva6_mmu
             end
           end else begin
             if (CVA6Cfg.RVH && ptw_error_at_g_st) begin
-              lsu_exception_o.cause = riscv::LOAD_GUEST_PAGE_FAULT;
+              lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_GUEST_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
               lsu_exception_o.valid = 1'b1;
               if (CVA6Cfg.TvalEn)
                 lsu_exception_o.tval = {
@@ -696,7 +696,7 @@ module cva6_mmu
                 lsu_exception_o.gva = ld_st_v_i;
               end
             end else begin
-              lsu_exception_o.cause = riscv::LOAD_PAGE_FAULT;
+              lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_PAGE_FAULT;
               lsu_exception_o.valid = 1'b1;
               if (CVA6Cfg.TvalEn)
                 lsu_exception_o.tval = {

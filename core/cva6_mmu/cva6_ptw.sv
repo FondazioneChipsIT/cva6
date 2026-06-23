@@ -408,9 +408,11 @@ module cva6_ptw
           // -------------
           // Invalid PTE
           // -------------
-          // If pte.v = 0, or if pte.r = 0 and pte.w = 1 (reserved encoding, excluding SS pages when SS enabled),
-          // or if SS instruction accesses a read-only page (r = 1, w = 0, x = 0) raise page-fault (supports COW)
-          if (!pte.v || (!pte.r && pte.w && !instr_is_ss_i) || ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
+          // If pte.v = 0, or if pte.r = 0 and pte.w = 1 (reserved encoding; when SS enabled only r=0,w=1,x=1
+          // remains reserved, r=0,w=1,x=0 is a valid SS page and must not be caught here for non-SS stores
+          // as those are routed to access-fault below), or if SS instruction accesses a read-only page
+          // (r = 1, w = 0, x = 0) raise page-fault (supports COW)
+          if (!pte.v || (!pte.r && pte.w && (!CVA6Cfg.RVZiCfiSS || pte.x) && !instr_is_ss_i) || ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
             state_d = PROPAGATE_ERROR;
           // if SS instruction accesses a non-SS page, or a non-SS store (regular or AMO) targets an SS page (r = 0, w = 1, x = 0), raise access-fault exception
           else if (((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && !(!pte.r && pte.w && !pte.x)) || (!instr_is_ss_i && (lsu_is_store_i || amo_is_store_i) && !pte.r && pte.w && !pte.x))
