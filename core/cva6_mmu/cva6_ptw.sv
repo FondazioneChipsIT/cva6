@@ -414,8 +414,10 @@ module cva6_ptw
           // (r = 1, w = 0, x = 0) raise page-fault (supports COW)
           if (!pte.v || (!pte.r && pte.w && (!CVA6Cfg.RVZiCfiSS || pte.x) && !instr_is_ss_i) || ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
             state_d = PROPAGATE_ERROR;
-          // if SS instruction accesses a non-SS page, or a non-SS store (regular or AMO) targets an SS page (r = 0, w = 1, x = 0), raise access-fault exception
-          else if (((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && !(!pte.r && pte.w && !pte.x)) || (!instr_is_ss_i && (lsu_is_store_i || amo_is_store_i) && !pte.r && pte.w && !pte.x))
+          // (pte.r || pte.x) targets only standard leaf PTEs; intermediate PTEs (xwr=000) and SS
+          // leaf PTEs (xwr=010) both have r=0 x=0 so neither triggers the access-fault here.
+          // Non-SS store/AMO to an SS page (xwr=010) also raises access-fault.
+          else if ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i && (pte.r || pte.x)) || (!instr_is_ss_i && (lsu_is_store_i || amo_is_store_i) && !pte.r && pte.w && !pte.x))
             state_d = PROPAGATE_ACCESS_ERROR;
           // -----------
           // Valid PTE

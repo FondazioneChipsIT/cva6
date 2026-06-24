@@ -179,7 +179,7 @@ module cva6_mmu
   assign itlb_lu_asid   = v_i ? vs_asid_i : asid_i;
   assign dtlb_lu_asid   = (ld_st_v_i || flush_tlb_vvma_i) ? vs_asid_i : asid_i;
 
-  assign amo_is_store = amo_req_i.amo_op == (AMO_SWAPW || AMO_SWAPD || AMO_SCW || AMO_SCD);
+  assign amo_is_store = (amo_req_i.amo_op == (AMO_SWAPW || AMO_SWAPD || AMO_SCW || AMO_SCD));
 
 
   cva6_tlb #(
