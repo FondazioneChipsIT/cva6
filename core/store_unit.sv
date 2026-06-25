@@ -224,7 +224,6 @@ module store_unit
         // it wasn't full
         if (state_q == WAIT_TRANSLATION && CVA6Cfg.MmuPresent) begin
           translation_req_o = 1'b1;
-          instr_is_ss_o = is_ss(lsu_ctrl_i.operation);
 
           if (dtlb_hit_i) begin
             state_d = IDLE;
@@ -232,6 +231,14 @@ module store_unit
         end
       end
     endcase
+
+    // The PTW samples instr_is_ss combinationally during PTE_LOOKUP, which can
+    // happen on any cycle while a translation request for this store is in
+    // flight (IDLE / VALID_STORE / WAIT_STORE_READY / WAIT_TRANSLATION). Tie it
+    // to translation_req_o so an SS store (sspush/ssamoswap) is never sampled as
+    // a normal store mid-walk: otherwise the SS leaf PTE (r=0,w=1,x=0) fails the
+    // leaf check and the PTW walks into garbage, hanging the core.
+    instr_is_ss_o = translation_req_o & is_ss(lsu_ctrl_i.operation);
 
     // -----------------
     // Access Exception

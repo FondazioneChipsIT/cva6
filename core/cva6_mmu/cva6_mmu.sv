@@ -588,9 +588,22 @@ module cva6_mmu
 
         // this is a store
         if (lsu_is_store_q) begin
+          // Non-SS store to a cached SS page (xwr=010): access-fault, not page-fault.
+          if (CVA6Cfg.RVZiCfiSS && !instr_is_ss_i && !dtlb_pte_q.r && dtlb_pte_q.w && !dtlb_pte_q.x) begin
+            lsu_exception_o.cause = riscv::ST_ACCESS_FAULT;
+            lsu_exception_o.valid = 1'b1;
+            if (CVA6Cfg.TvalEn)
+              lsu_exception_o.tval = {
+                {CVA6Cfg.XLEN - CVA6Cfg.VLEN{lsu_vaddr_q[CVA6Cfg.VLEN-1]}}, lsu_vaddr_q
+              };
+            if (CVA6Cfg.RVH) begin
+              lsu_exception_o.tval2 = '0;
+              lsu_exception_o.tinst = lsu_tinst_q;
+              lsu_exception_o.gva   = ld_st_v_i;
+            end
           // check if the page is write-able and we are not violating privileges
           // also check if the dirty flag is set
-          if(CVA6Cfg.RVH && en_ld_st_g_translation_i && (!dtlb_gpte_q.w || d_g_st_access_err || !dtlb_gpte_q.d)) begin
+          end else if(CVA6Cfg.RVH && en_ld_st_g_translation_i && (!dtlb_gpte_q.w || d_g_st_access_err || !dtlb_gpte_q.d)) begin
             lsu_exception_o.cause = riscv::STORE_GUEST_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
