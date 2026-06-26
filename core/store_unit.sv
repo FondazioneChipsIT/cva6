@@ -132,6 +132,7 @@ module store_unit
   logic st_valid_without_flush;
   logic instr_is_amo;
   assign instr_is_amo = is_amo(lsu_ctrl_i.operation);
+  assign instr_is_ss_o = is_ss(lsu_ctrl_i.operation);
   // keep the data and the byte enable for the second cycle (after address translation)
   logic [CVA6Cfg.XLEN-1:0] st_data_n, st_data_q;
   logic [(CVA6Cfg.XLEN/8)-1:0] st_be_n, st_be_q;
@@ -153,7 +154,6 @@ module store_unit
     st_valid               = 1'b0;
     st_valid_without_flush = 1'b0;
     pop_st_o               = 1'b0;
-    instr_is_ss_o          = 1'b0;
     ex_o                   = ex_i;
     trans_id_n             = lsu_ctrl_i.trans_id;
     state_d                = state_q;
@@ -231,14 +231,6 @@ module store_unit
         end
       end
     endcase
-
-    // The PTW samples instr_is_ss combinationally during PTE_LOOKUP, which can
-    // happen on any cycle while a translation request for this store is in
-    // flight (IDLE / VALID_STORE / WAIT_STORE_READY / WAIT_TRANSLATION). Tie it
-    // to translation_req_o so an SS store (sspush/ssamoswap) is never sampled as
-    // a normal store mid-walk: otherwise the SS leaf PTE (r=0,w=1,x=0) fails the
-    // leaf check and the PTW walks into garbage, hanging the core.
-    instr_is_ss_o = translation_req_o & is_ss(lsu_ctrl_i.operation);
 
     // -----------------
     // Access Exception

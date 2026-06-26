@@ -199,11 +199,8 @@ module load_unit
   assign hlvx_inst_o = CVA6Cfg.RVH ? lsu_ctrl_i.hlvx_inst : 1'b0;
   // feed-through the transformed instruction for mmu
   assign tinst_o = CVA6Cfg.RVH ? lsu_ctrl_i.tinst : '0;
-  // sspopchk reads the shadow stack: the PTW samples instr_is_ss combinationally
-  // during PTE_LOOKUP, so flag it for the whole time a translation request for
-  // this load is in flight. Without this the SS leaf PTE (r=0,w=1,x=0) is not
-  // recognised as a leaf and the PTW walks into garbage, hanging the core.
-  assign instr_is_ss_o = translation_req_o & is_ss(lsu_ctrl_i.operation);
+
+  assign instr_is_ss_o =   is_ss(lsu_ctrl_i.operation);
   // this is a read-only interface so set the write enable to 0
   assign req_port_o.data_we = 1'b0;
   assign req_port_o.data_wdata = '0;
