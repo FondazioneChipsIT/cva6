@@ -505,6 +505,7 @@ module cva6_mmu
   pte_cva6_t dtlb_gpte_n, dtlb_gpte_q;
   logic lsu_req_n, lsu_req_q;
   logic lsu_is_store_n, lsu_is_store_q;
+  logic instr_is_ss_n, instr_is_ss_q;
   logic dtlb_hit_n, dtlb_hit_q;
   logic [CVA6Cfg.PtLevels-2:0] dtlb_is_page_n, dtlb_is_page_q;
   exception_t misaligned_ex_n, misaligned_ex_q;
@@ -523,6 +524,7 @@ module cva6_mmu
     lsu_is_store_n = lsu_is_store_i;
     dtlb_is_page_n = dtlb_is_page;
     misaligned_ex_n = misaligned_ex_i;
+    instr_is_ss_n = instr_is_ss_i;
 
     lsu_valid_o = lsu_req_q;
     lsu_exception_o = misaligned_ex_q;
@@ -588,9 +590,23 @@ module cva6_mmu
 
         // this is a store
         if (lsu_is_store_q) begin
+
+           // Non-SS store to a cached SS page (xwr=010): access-fault, not page-fault.
+          if (CVA6Cfg.RVZiCfiSS && !instr_is_ss_q && !dtlb_pte_q.r && dtlb_pte_q.w && !dtlb_pte_q.x) begin
+            lsu_exception_o.cause = riscv::ST_ACCESS_FAULT;
+            lsu_exception_o.valid = 1'b1;
+            if (CVA6Cfg.TvalEn)
+              lsu_exception_o.tval = {
+                {CVA6Cfg.XLEN - CVA6Cfg.VLEN{lsu_vaddr_q[CVA6Cfg.VLEN-1]}}, lsu_vaddr_q
+              };
+            if (CVA6Cfg.RVH) begin
+              lsu_exception_o.tval2 = '0;
+              lsu_exception_o.tinst = lsu_tinst_q;
+              lsu_exception_o.gva   = ld_st_v_i;
+            end
           // check if the page is write-able and we are not violating privileges
           // also check if the dirty flag is set
-          if(CVA6Cfg.RVH && en_ld_st_g_translation_i && (!dtlb_gpte_q.w || d_g_st_access_err || !dtlb_gpte_q.d)) begin
+          end else if(CVA6Cfg.RVH && en_ld_st_g_translation_i && (!dtlb_gpte_q.w || d_g_st_access_err || !dtlb_gpte_q.d)) begin
             lsu_exception_o.cause = riscv::STORE_GUEST_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
@@ -618,7 +634,7 @@ module cva6_mmu
           // this is a load
         end else begin
           if (CVA6Cfg.RVH && d_g_st_access_err) begin
-            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_GUEST_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_q) ? riscv::STORE_GUEST_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
@@ -631,7 +647,7 @@ module cva6_mmu
             end
             // check for sufficient access privileges - throw a page fault if necessary
           end else if (daccess_err || canonical_addr_check) begin
-            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_PAGE_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_q) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_PAGE_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
@@ -684,7 +700,7 @@ module cva6_mmu
             end
           end else begin
             if (CVA6Cfg.RVH && ptw_error_at_g_st) begin
-              lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_GUEST_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
+              lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_q) ? riscv::STORE_GUEST_PAGE_FAULT : riscv::LOAD_GUEST_PAGE_FAULT;
               lsu_exception_o.valid = 1'b1;
               if (CVA6Cfg.TvalEn)
                 lsu_exception_o.tval = {
@@ -696,7 +712,7 @@ module cva6_mmu
                 lsu_exception_o.gva = ld_st_v_i;
               end
             end else begin
-              lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_PAGE_FAULT;
+              lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_q) ? riscv::STORE_PAGE_FAULT : riscv::LOAD_PAGE_FAULT;
               lsu_exception_o.valid = 1'b1;
               if (CVA6Cfg.TvalEn)
                 lsu_exception_o.tval = {
@@ -723,7 +739,7 @@ module cva6_mmu
               };
           end else begin
             // the page table walker can only throw page faults
-            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_i) ? riscv::ST_ACCESS_FAULT : riscv::LD_ACCESS_FAULT;
+            lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_q) ? riscv::ST_ACCESS_FAULT : riscv::LD_ACCESS_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
@@ -764,6 +780,7 @@ module cva6_mmu
       lsu_is_store_q  <= lsu_is_store_n;
       dtlb_is_page_q  <= dtlb_is_page_n;
       misaligned_ex_q <= misaligned_ex_n;
+      instr_is_ss_q   <= instr_is_ss_n;
 
       if (CVA6Cfg.RVH) begin
         lsu_tinst_q     <= lsu_tinst_n;
