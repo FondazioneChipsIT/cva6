@@ -144,6 +144,9 @@ ${CVA6_REPO_DIR}/core/controller.sv
 ${CVA6_REPO_DIR}/core/zcmt_decoder.sv
 ${CVA6_REPO_DIR}/core/csr_buffer.sv
 ${CVA6_REPO_DIR}/core/csr_regfile.sv
+${CVA6_REPO_DIR}/core/sspopchk_unit.sv
+${CVA6_REPO_DIR}/core/lpad_port.sv
+${CVA6_REPO_DIR}/core/lpad_unit.sv
 ${CVA6_REPO_DIR}/core/decoder.sv
 ${CVA6_REPO_DIR}/core/ex_stage.sv
 ${CVA6_REPO_DIR}/core/instr_realign.sv
