@@ -388,7 +388,7 @@ module ex_stage
       .csr_addr_o
   );
 
-  assign flu_valid_o = |one_cycle_select | mult_valid;
+  assign flu_valid_o = (|one_cycle_select | mult_valid) & !(CVA6Cfg.RVZiCfiSS & ((one_cycle_data.operation == ariane_pkg::SSPUSH) | (one_cycle_data.operation == ariane_pkg::SSPOPCHK)));
 
   // result MUX
   always_comb begin

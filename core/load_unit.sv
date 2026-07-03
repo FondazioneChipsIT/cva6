@@ -200,7 +200,7 @@ module load_unit
   // feed-through the transformed instruction for mmu
   assign tinst_o = CVA6Cfg.RVH ? lsu_ctrl_i.tinst : '0;
 
-  assign instr_is_ss_o =   is_ss(lsu_ctrl_i.operation);
+  assign instr_is_ss_o =   is_ss(lsu_ctrl_i.operation) && valid_i;
   // this is a read-only interface so set the write enable to 0
   assign req_port_o.data_we = 1'b0;
   assign req_port_o.data_wdata = '0;

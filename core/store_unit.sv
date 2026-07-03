@@ -132,7 +132,7 @@ module store_unit
   logic st_valid_without_flush;
   logic instr_is_amo;
   assign instr_is_amo = is_amo(lsu_ctrl_i.operation);
-  assign instr_is_ss_o = is_ss(lsu_ctrl_i.operation);
+  assign instr_is_ss_o = is_ss(lsu_ctrl_i.operation) && valid_i;
   // keep the data and the byte enable for the second cycle (after address translation)
   logic [CVA6Cfg.XLEN-1:0] st_data_n, st_data_q;
   logic [(CVA6Cfg.XLEN/8)-1:0] st_be_n, st_be_q;
