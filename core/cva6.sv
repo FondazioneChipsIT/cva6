@@ -1895,7 +1895,7 @@ module cva6
      end
   end
 
-  assign ctr_commit_port_1 = {
+  assign ctr_commit_port_1 = '{
      ctr_source: ctr_source[0],
      ctr_type  : ctr_type[0],
      ctr_instr : ctr_instr[0],
@@ -1903,7 +1903,7 @@ module cva6
      valid     : ctr_valid[0]
   };
 
-  assign ctr_commit_port_2 = {
+  assign ctr_commit_port_2 = '{
      ctr_source: ctr_source[1],
      ctr_type  : ctr_type[1],
      ctr_instr : ctr_instr[1],
