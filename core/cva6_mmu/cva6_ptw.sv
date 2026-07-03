@@ -88,8 +88,7 @@ module cva6_ptw
     output logic [CVA6Cfg.PLEN-1:0] bad_paddr_o,
     output logic [CVA6Cfg.GPLEN-1:0] bad_gpaddr_o,
     // Zicfiss
-    input logic instr_is_ss_i,
-    input logic amo_is_store_i
+    input logic instr_is_ss_i
 );
 
   // input registers
@@ -417,7 +416,7 @@ module cva6_ptw
           // (pte.r || pte.x) targets only standard leaf PTEs; intermediate PTEs (xwr=000) and SS
           // leaf PTEs (xwr=010) both have r=0 x=0 so neither triggers the access-fault here.
           // Non-SS store/AMO to an SS page (xwr=010) also raises access-fault.
-          else if ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i && (pte.r || pte.x)) || (!instr_is_ss_i && (lsu_is_store_i || amo_is_store_i) && !pte.r && pte.w && !pte.x))
+          else if ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i && (pte.r || pte.x)) || (!instr_is_ss_i && lsu_is_store_i && !pte.r && pte.w && !pte.x))
             state_d = PROPAGATE_ACCESS_ERROR;
           // -----------
           // Valid PTE

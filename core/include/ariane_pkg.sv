@@ -638,6 +638,11 @@ package ariane_pkg;
       [AMO_LRW : AMO_MINDU]: begin
         return 1'b1;
       end
+      // SSAMOSWAP goes through the same store-unit AMO buffer / commit
+      // handshake as regular AMOs (amo_valid_commit_o, amo_resp_i.ack), so
+      SSAMO_SWAPW, SSAMO_SWAPD: begin
+        return 1'b1;
+      end
       default: return 1'b0;
     endcase
   endfunction

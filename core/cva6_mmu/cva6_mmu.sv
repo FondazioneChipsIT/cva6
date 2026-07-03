@@ -103,8 +103,7 @@ module cva6_mmu
     input riscv::pmpcfg_t [avoid_neg(CVA6Cfg.NrPMPEntries-1):0]                   pmpcfg_i,
     input logic           [avoid_neg(CVA6Cfg.NrPMPEntries-1):0][CVA6Cfg.PLEN-3:0] pmpaddr_i,
 
-    input logic instr_is_ss_i,  // the translation is requested by a shadow stack writeinstr
-    input amo_req_t amo_req_i
+    input logic instr_is_ss_i  // the translation is requested by a shadow stack writeinstr
 );
 
   // memory management, pte for cva6
@@ -170,17 +169,12 @@ module cva6_mmu
   logic shared_tlb_access, shared_tlb_miss;
   logic shared_tlb_hit, itlb_req;
 
-  logic amo_is_store;
-
   // Assignments
 
   assign itlb_lu_access = icache_areq_i.fetch_req;
   assign dtlb_lu_access = lsu_req_i & !misaligned_ex_i.valid;
   assign itlb_lu_asid   = v_i ? vs_asid_i : asid_i;
   assign dtlb_lu_asid   = (ld_st_v_i || flush_tlb_vvma_i) ? vs_asid_i : asid_i;
-
-  assign amo_is_store = (amo_req_i.amo_op == (AMO_SWAPW || AMO_SWAPD || AMO_SCW || AMO_SCD));
-
 
   cva6_tlb #(
       .CVA6Cfg          (CVA6Cfg),
@@ -358,8 +352,7 @@ module cva6_mmu
       .bad_paddr_o(ptw_bad_paddr),
       .bad_gpaddr_o(ptw_bad_gpaddr),
 
-      .instr_is_ss_i,
-      .amo_is_store_i(amo_is_store)
+      .instr_is_ss_i
   );
 
   //-----------------------
