@@ -143,6 +143,8 @@ ${CVA6_REPO_DIR}/core/controller.sv
 ${CVA6_REPO_DIR}/core/zcmt_decoder.sv
 ${CVA6_REPO_DIR}/core/csr_buffer.sv
 ${CVA6_REPO_DIR}/core/csr_regfile.sv
+${CVA6_REPO_DIR}/core/ctr_unit.sv
+${CVA6_REPO_DIR}/core/fifo_dp_v3.sv
 ${CVA6_REPO_DIR}/core/decoder.sv
 ${CVA6_REPO_DIR}/core/ex_stage.sv
 ${CVA6_REPO_DIR}/core/instr_realign.sv
