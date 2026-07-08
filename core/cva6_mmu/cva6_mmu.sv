@@ -581,8 +581,23 @@ module cva6_mmu
         // virtual memory based exceptions are PAGE_FAULTS
         // physical memory based exceptions are ACCESS_FAULTS (PMA/PMP)
 
-        // this is a store
-        if (lsu_is_store_q) begin
+        // Zicfiss: SS access to a non-SS page (xwr!=010). Read-only -> page-fault (CoW), else access-fault.
+        if (CVA6Cfg.RVZiCfiSS && instr_is_ss_q &&
+            !(!dtlb_pte_q.r && dtlb_pte_q.w && !dtlb_pte_q.x)) begin
+          lsu_exception_o.cause = (dtlb_pte_q.r && !dtlb_pte_q.w && !dtlb_pte_q.x) ?
+              riscv::STORE_PAGE_FAULT : riscv::ST_ACCESS_FAULT;
+          lsu_exception_o.valid = 1'b1;
+          if (CVA6Cfg.TvalEn)
+            lsu_exception_o.tval = {
+              {CVA6Cfg.XLEN - CVA6Cfg.VLEN{lsu_vaddr_q[CVA6Cfg.VLEN-1]}}, lsu_vaddr_q
+            };
+          if (CVA6Cfg.RVH) begin
+            lsu_exception_o.tval2 = '0;
+            lsu_exception_o.tinst = lsu_tinst_q;
+            lsu_exception_o.gva   = ld_st_v_i;
+          end
+          // this is a store
+        end else if (lsu_is_store_q) begin
 
            // Non-SS store to a cached SS page (xwr=010): access-fault, not page-fault.
           if (CVA6Cfg.RVZiCfiSS && !instr_is_ss_q && !dtlb_pte_q.r && dtlb_pte_q.w && !dtlb_pte_q.x) begin
@@ -723,13 +738,18 @@ module cva6_mmu
           // an error makes the translation valid
           lsu_valid_o = 1'b1;
           // Any fault of the page table walk should be based of the original access type
-          if (lsu_is_store_q && !CVA6Cfg.RVH && CVA6Cfg.PtLevels == 3) begin
+          if (lsu_is_store_q && CVA6Cfg.PtLevels == 3) begin
             lsu_exception_o.cause = riscv::ST_ACCESS_FAULT;
             lsu_exception_o.valid = 1'b1;
             if (CVA6Cfg.TvalEn)
               lsu_exception_o.tval = {
                 {CVA6Cfg.XLEN - CVA6Cfg.VLEN{lsu_vaddr_q[CVA6Cfg.VLEN-1]}}, update_vaddr
               };
+            if (CVA6Cfg.RVH) begin
+              lsu_exception_o.tval2 = '0;
+              lsu_exception_o.tinst = lsu_tinst_q;
+              lsu_exception_o.gva   = ld_st_v_i;
+            end
           end else begin
             // the page table walker can only throw page faults
             lsu_exception_o.cause = (CVA6Cfg.RVZiCfiSS && instr_is_ss_q) ? riscv::ST_ACCESS_FAULT : riscv::LD_ACCESS_FAULT;

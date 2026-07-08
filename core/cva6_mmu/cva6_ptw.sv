@@ -424,7 +424,7 @@ module cva6_ptw
           else begin
             state_d = LATENCY;
             // it is a valid PTE if pte.r = 1 or pte.x = 1, or if it is an SS page (r = 0, w = 1, x = 0) accessed by an SS instruction
-            if (pte.r || pte.x || (CVA6Cfg.RVZiCfiSS && instr_is_ss_i && !pte.r && pte.w && !pte.x)) begin
+            if (pte.r || pte.x || (CVA6Cfg.RVZiCfiSS && !pte.r && pte.w && !pte.x)) begin
               if (CVA6Cfg.RVH) begin
                 case (ptw_stage_q)
                   S_STAGE: begin
@@ -481,7 +481,7 @@ module cva6_ptw
                 if (
                   (pte.a && ((pte.r && !hlvx_inst_i) || (pte.x && (mxr_i || hlvx_inst_i || (ptw_stage_q == S_STAGE && vmxr_i && ld_st_v_i && CVA6Cfg.RVH)))
                     // SS instruction accessing an SS page (r = 0, w = 1, x = 0) is permitted for both reads and stores
-                    || (CVA6Cfg.RVZiCfiSS && instr_is_ss_i && !pte.r && pte.w && !pte.x)))
+                    || (CVA6Cfg.RVZiCfiSS && !pte.r && pte.w && !pte.x)))
                     // Request is a store: perform some additional checks
                     // If the request was a store and the page is not write-able, raise an error
                     // the same applies if the dirty flag is not set
