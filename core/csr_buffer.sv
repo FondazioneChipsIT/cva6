@@ -57,7 +57,8 @@ module csr_buffer
     // by default we are ready
     csr_ready_o = 1'b1;
     // if we have a valid uncommitted csr req or are just getting one WITHOUT a commit in, we are not ready
-    if ((csr_reg_q.valid || csr_valid_i) && ~csr_commit_i) csr_ready_o = 1'b0;
+    if ((csr_reg_q.valid || csr_valid_i) && (~csr_commit_i || (CVA6Cfg.RVZiCfiSS && csr_reg_q.csr_address == riscv::CSR_SSP)))
+      csr_ready_o = 1'b0;
     // if we got a valid from the scoreboard
     // store the CSR address
     if (csr_valid_i) begin
