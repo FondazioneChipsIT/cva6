@@ -132,6 +132,7 @@ module store_unit
   logic st_valid_without_flush;
   logic instr_is_amo;
   assign instr_is_amo = is_amo(lsu_ctrl_i.operation);
+  assign instr_is_ss_o = is_ss(lsu_ctrl_i.operation) && valid_i;
   // keep the data and the byte enable for the second cycle (after address translation)
   logic [CVA6Cfg.XLEN-1:0] st_data_n, st_data_q;
   logic [(CVA6Cfg.XLEN/8)-1:0] st_be_n, st_be_q;
@@ -153,7 +154,6 @@ module store_unit
     st_valid               = 1'b0;
     st_valid_without_flush = 1'b0;
     pop_st_o               = 1'b0;
-    instr_is_ss_o          = 1'b0;
     ex_o                   = ex_i;
     trans_id_n             = lsu_ctrl_i.trans_id;
     state_d                = state_q;
@@ -224,7 +224,6 @@ module store_unit
         // it wasn't full
         if (state_q == WAIT_TRANSLATION && CVA6Cfg.MmuPresent) begin
           translation_req_o = 1'b1;
-          instr_is_ss_o = is_ss(lsu_ctrl_i.operation);
 
           if (dtlb_hit_i) begin
             state_d = IDLE;

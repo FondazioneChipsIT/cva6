@@ -43,6 +43,12 @@ module lpad_port
     output logic bypass_o
 );
 
+  logic is_sbe_valid;
+  logic is_sbe_lpad;
+  logic is_sbe_lplmismatch;
+  logic is_sbe_lplwrite;
+  logic is_sbe_jalr_lpad;
+
   assign is_sbe_valid       = sbe_i.valid && ~sbe_i.ex.valid && lpe_i;
   assign is_sbe_lpad        = sbe_i.pc[1:0] == 2'b0 && sbe_i.op == ZICFI_LPAD;
   assign is_sbe_lplmismatch = sbe_i.result != 'b0 && sbe_i.result[LPAD_LABEL_BITS-1:0] != lpl_i;

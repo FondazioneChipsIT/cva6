@@ -229,6 +229,17 @@ module commit_stage
           if (commit_instr_i[0].op == ariane_pkg::SSPUSH || commit_instr_i[0].op == ariane_pkg::SSPOPCHK) begin
             if (!commit_drop_i[0]) begin
               csr_op_o = commit_instr_i[0].op;
+              if (!csr_exception_i.valid) begin
+                if (commit_instr_i[0].op == ariane_pkg::SSPUSH)
+                  commit_csr_o = commit_lsu_o; // avoid committing sspush csr if the store is waiting
+                else
+                  commit_csr_o = 1'b1;
+              end else begin
+                commit_ack_o[0] = 1'b0;
+                we_gpr_o[0] = 1'b0;
+                if (commit_instr_i[0].op == ariane_pkg::SSPUSH)
+                  commit_lsu_o = 1'b0; // avoid committing sspush store if we got a csr exception
+              end
             end
           end
         // ------------------

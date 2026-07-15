@@ -69,6 +69,9 @@ core/compressed_decoder.sv
 core/controller.sv
 core/csr_buffer.sv
 core/csr_regfile.sv
+core/sspopchk_unit.sv
+core/lpad_port.sv
+core/lpad_unit.sv
 core/decoder.sv
 core/ex_stage.sv
 core/frontend/btb.sv

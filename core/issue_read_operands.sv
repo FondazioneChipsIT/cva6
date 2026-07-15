@@ -427,6 +427,8 @@ module issue_read_operands
             fus_busy[1].fpu = 1'b1;
             fus_busy[1].fpu_vec = 1'b1;
           end
+          if (CVA6Cfg.RVZiCfiSS && (issue_instr_i[0].op == ariane_pkg::SSPUSH || issue_instr_i[0].op == ariane_pkg::SSPOPCHK))
+            fus_busy[1] = '1;
         end
         CVXIF: ;
         default: ;
@@ -450,8 +452,18 @@ module issue_read_operands
         CTRL_FLOW: fu_busy[i] = fus_busy[i].ctrl_flow;
         CSR: fu_busy[i] = fus_busy[i].csr;
         MULT: fu_busy[i] = fus_busy[i].mult;
-        LOAD: fu_busy[i] = fus_busy[i].load;
-        STORE: fu_busy[i] = fus_busy[i].store;
+        LOAD: begin
+          if (CVA6Cfg.RVZiCfiSS && (issue_instr_i[i].op == ariane_pkg::SSPUSH || issue_instr_i[i].op == ariane_pkg::SSPOPCHK)) 
+            fu_busy[i] = fus_busy[i].load || fus_busy[i].csr;
+          else
+            fu_busy[i] = fus_busy[i].load;
+        end
+        STORE: begin
+          if (CVA6Cfg.RVZiCfiSS && (issue_instr_i[i].op == ariane_pkg::SSPUSH || issue_instr_i[i].op == ariane_pkg::SSPOPCHK)) 
+            fu_busy[i] = fus_busy[i].store || fus_busy[i].csr;
+          else
+            fu_busy[i] = fus_busy[i].store;
+        end
         CVXIF: fu_busy[i] = fus_busy[i].cvxif;
         AES: fu_busy[i] = fus_busy[i].aes;
         default:
@@ -781,6 +793,8 @@ module issue_read_operands
           end
           LOAD, STORE: begin
             lsu_valid_n[i] = 1'b1;
+            if (CVA6Cfg.RVZiCfiSS && (issue_instr_i[i].op == ariane_pkg::SSPUSH || issue_instr_i[i].op == ariane_pkg::SSPOPCHK))
+              csr_valid_n[i] = 1'b1;
           end
           CSR: begin
             csr_valid_n[i] = 1'b1;

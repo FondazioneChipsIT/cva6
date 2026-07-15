@@ -50,6 +50,8 @@ module load_unit
     output exception_t ex_o,
     // Request address translation - MMU
     output logic translation_req_o,
+    // The translation is requested by a shadow-stack read (sspopchk) - MMU
+    output logic instr_is_ss_o,
     // Virtual address - MMU
     output logic [CVA6Cfg.VLEN-1:0] vaddr_o,
     // Transformed trap instruction out - MMU
@@ -197,6 +199,8 @@ module load_unit
   assign hlvx_inst_o = CVA6Cfg.RVH ? lsu_ctrl_i.hlvx_inst : 1'b0;
   // feed-through the transformed instruction for mmu
   assign tinst_o = CVA6Cfg.RVH ? lsu_ctrl_i.tinst : '0;
+
+  assign instr_is_ss_o =   is_ss(lsu_ctrl_i.operation) && valid_i;
   // this is a read-only interface so set the write enable to 0
   assign req_port_o.data_we = 1'b0;
   assign req_port_o.data_wdata = '0;

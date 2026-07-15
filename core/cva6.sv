@@ -1949,7 +1949,7 @@ module cva6
   // Handle data interface to be the control transfer records unit
 
   for (genvar i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
-    assign ctr_commit_o[i] = {
+    assign ctr_commit_o[i] = '{
       ctr_source: commit_instr_lp_commit[i].pc,
       ctr_target: commit_instr_lp_commit[i].bp.predict_address,
       ctr_type  : commit_instr_lp_commit[i].ex.valid ? riscv::CTR_TYPE_EXC : commit_instr_lp_commit[i].cftype,

@@ -217,6 +217,8 @@ module load_store_unit
   logic                    st_hs_ld_st_inst;
   logic                    st_hlvx_inst;
   logic                    instr_is_ss;
+  logic                    ld_instr_is_ss;
+  logic                    st_instr_is_ss;
   logic translation_req, cva6_translation_req, acc_translation_req;
   logic translation_valid, cva6_translation_valid;
   logic [CVA6Cfg.VLEN-1:0] mmu_vaddr, cva6_mmu_vaddr, acc_mmu_vaddr;
@@ -546,7 +548,7 @@ module load_store_unit
       .paddr_i              (cva6_mmu_paddr),
       .ex_i                 (cva6_mmu_exception),
       .dtlb_hit_i           (cva6_dtlb_hit),
-      .instr_is_ss_o        (instr_is_ss),
+      .instr_is_ss_o        (st_instr_is_ss),
       // Load Unit
       .page_offset_i        (page_offset),
       .page_offset_matches_o(page_offset_matches),
@@ -582,6 +584,7 @@ module load_store_unit
       .ex_o                 (ld_ex),
       // MMU port
       .translation_req_o    (ld_translation_req),
+      .instr_is_ss_o        (ld_instr_is_ss),
       .vaddr_o              (ld_vaddr),
       .tinst_o              (ld_tinst),
       .hs_ld_st_inst_o      (ld_hs_ld_st_inst),
@@ -640,6 +643,11 @@ module load_store_unit
     mmu_tinst            = {32{1'b0}};
     mmu_hs_ld_st_inst    = 1'b0;
     mmu_hlvx_inst        = 1'b0;
+    // shadow-stack flag for the MMU, selected from whichever unit owns the
+    // in-flight translation (sspopchk on the load side, sspush/ssamoswap on the
+    // store side). Each unit already gates its instr_is_ss with its own
+    // translation_req, so this mux mirrors the translation_req/vaddr selection.
+    instr_is_ss          = 1'b0;
 
     // check the operation to activate the right functional unit accordingly
     unique case (lsu_ctrl.fu)
@@ -648,6 +656,7 @@ module load_store_unit
         ld_valid_i           = lsu_ctrl.valid;
         cva6_translation_req = ld_translation_req;
         cva6_mmu_vaddr       = ld_vaddr;
+        instr_is_ss          = ld_instr_is_ss;
         if (CVA6Cfg.RVH) begin
           mmu_tinst         = ld_tinst;
           mmu_hs_ld_st_inst = ld_hs_ld_st_inst;
@@ -659,6 +668,7 @@ module load_store_unit
         st_valid_i           = lsu_ctrl.valid;
         cva6_translation_req = st_translation_req;
         cva6_mmu_vaddr       = st_vaddr;
+        instr_is_ss          = st_instr_is_ss;
         if (CVA6Cfg.RVH) begin
           mmu_tinst         = st_tinst;
           mmu_hs_ld_st_inst = st_hs_ld_st_inst;

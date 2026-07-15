@@ -638,13 +638,22 @@ package ariane_pkg;
       [AMO_LRW : AMO_MINDU]: begin
         return 1'b1;
       end
+      // SSAMOSWAP goes through the same store-unit AMO buffer / commit
+      // handshake as regular AMOs (amo_valid_commit_o, amo_resp_i.ack), so
+      SSAMO_SWAPW, SSAMO_SWAPD: begin
+        return 1'b1;
+      end
       default: return 1'b0;
     endcase
   endfunction
 
   function automatic logic is_ss(fu_op op);
     case (op) inside
-      SSPUSH, SSAMO_SWAPD, SSAMO_SWAPW: begin
+      // Shadow-stack memory ops: SSPUSH / SSAMO_SWAP* reach the store unit,
+      // SSPOPCHK reaches the load unit. All require SS translation semantics
+      // (the SS leaf PTE r=0,w=1,x=0 must be recognised by the PTW), so the
+      // load and store units both gate instr_is_ss with this function.
+      SSPUSH, SSPOPCHK, SSAMO_SWAPD, SSAMO_SWAPW: begin
         return 1'b1;
       end
       default: return 1'b0;

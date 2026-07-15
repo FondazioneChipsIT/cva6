@@ -407,19 +407,24 @@ module cva6_ptw
           // -------------
           // Invalid PTE
           // -------------
-          // If pte.v = 0, or if pte.r = 0 and pte.w = 1, stop and raise a page-fault exception. if the instr is not ss
-          if (!pte.v || (!pte.r && pte.w && !instr_is_ss_i && lsu_is_store_i) || (instr_is_ss_i && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
+          // If pte.v = 0, or if pte.r = 0 and pte.w = 1 (reserved encoding; when SS enabled only r=0,w=1,x=1
+          // remains reserved, r=0,w=1,x=0 is a valid SS page and must not be caught here for non-SS stores
+          // as those are routed to access-fault below), or if SS instruction accesses a read-only page
+          // (r = 1, w = 0, x = 0) raise page-fault (supports COW)
+          if (!pte.v || (!pte.r && pte.w && (!CVA6Cfg.RVZiCfiSS || pte.x) && !instr_is_ss_i) || ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i) && pte.r && !pte.w && !pte.x) || (|pte.reserved && CVA6Cfg.XLEN == 64))
             state_d = PROPAGATE_ERROR;
-          // if shadow stack access and the accessed page is not SS (r = 0, w = 1, x = 1) or read-only (r = 1, w = 0, x = 0) raise access-fault exception
-          else if ((instr_is_ss_i && !(!pte.r && pte.w && !pte.x)) || (!instr_is_ss_i && lsu_is_store_i && !pte.r && pte.w && !pte.x) || (instr_is_ss_i && !(pte.r && !pte.w && !pte.x)))
+          // (pte.r || pte.x) targets only standard leaf PTEs; intermediate PTEs (xwr=000) and SS
+          // leaf PTEs (xwr=010) both have r=0 x=0 so neither triggers the access-fault here.
+          // Non-SS store/AMO to an SS page (xwr=010) also raises access-fault.
+          else if ((CVA6Cfg.RVZiCfiSS && instr_is_ss_i && (pte.r || pte.x)) || (!instr_is_ss_i && lsu_is_store_i && !pte.r && pte.w && !pte.x))
             state_d = PROPAGATE_ACCESS_ERROR;
           // -----------
           // Valid PTE
           // -----------
           else begin
             state_d = LATENCY;
-            // it is a valid PTE if pte.r = 1 or pte.x = 1
-            if (pte.r || pte.x) begin
+            // it is a valid PTE if pte.r = 1 or pte.x = 1, or if it is an SS page (r = 0, w = 1, x = 0) accessed by an SS instruction
+            if (pte.r || pte.x || (CVA6Cfg.RVZiCfiSS && !pte.r && pte.w && !pte.x)) begin
               if (CVA6Cfg.RVH) begin
                 case (ptw_stage_q)
                   S_STAGE: begin
@@ -474,7 +479,9 @@ module cva6_ptw
                 // we can directly raise an error. This doesn't put a useless
                 // entry into the TLB.
                 if (
-                  (pte.a && ((pte.r && !hlvx_inst_i) || (pte.x && (mxr_i || hlvx_inst_i || (ptw_stage_q == S_STAGE && vmxr_i && ld_st_v_i && CVA6Cfg.RVH)))))
+                  (pte.a && ((pte.r && !hlvx_inst_i) || (pte.x && (mxr_i || hlvx_inst_i || (ptw_stage_q == S_STAGE && vmxr_i && ld_st_v_i && CVA6Cfg.RVH)))
+                    // SS instruction accessing an SS page (r = 0, w = 1, x = 0) is permitted for both reads and stores
+                    || (CVA6Cfg.RVZiCfiSS && !pte.r && pte.w && !pte.x)))
                     // Request is a store: perform some additional checks
                     // If the request was a store and the page is not write-able, raise an error
                     // the same applies if the dirty flag is not set

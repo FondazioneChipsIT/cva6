@@ -793,7 +793,7 @@ package riscv;
   localparam logic [63:0] MSTATUS_TVM = 'h00100000;
   localparam logic [63:0] MSTATUS_TW = 'h00200000;
   localparam logic [63:0] MSTATUS_TSR = 'h00400000;
-  localparam logic [63:0] MSTATUS_MPELP = 'h0000020000000000;
+  localparam logic [63:0] MSTATUS_MPELP = 64'h0000020000000000;
   function automatic logic [63:0] mstatus_uxl(logic IS_XLEN64);
     return {30'h0000000, IS_XLEN64, IS_XLEN64, 32'h00000000};
   endfunction
