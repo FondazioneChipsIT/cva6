@@ -143,6 +143,11 @@ module cva6_hpdcache_if_adapter
       hpdcache_req_t                         hpdcache_req_store;
       hpdcache_req_t                         hpdcache_req_flush;
 
+      hpdcache_req_t                         tmp_req_amo;
+      hpdcache_req_t                         tmp_req_store;
+      hpdcache_req_t                         tmp_req_flush;
+
+
       flush_fsm_t flush_fsm_q, flush_fsm_d;
 
       logic forward_store, forward_amo, forward_flush;
@@ -248,68 +253,71 @@ module cva6_hpdcache_if_adapter
         assign amo_data    = {32'b0, cva6_amo_req_i.operand_b};
         assign amo_data_be = 8'h0f;
       end
-
-      assign hpdcache_req_amo = '{
-              addr_offset: amo_addr_offset,
-              wdata: amo_data,
-              op: amo_op,
-              be: amo_data_be,
-              size: cva6_amo_req_i.size,
-              sid: hpdcache_req_sid_i,
-              tid: '1,
-              need_rsp: 1'b1,
-              phys_indexed: 1'b1,
-              addr_tag: amo_tag,
-              pma: '{
+       always_comb begin
+        tmp_req_amo = '0;
+        tmp_req_amo.addr_offset = amo_addr_offset;
+        tmp_req_amo.wdata = amo_data;
+        tmp_req_amo.op = amo_op;
+        tmp_req_amo.be = amo_data_be;
+        tmp_req_amo.size = cva6_amo_req_i.size;
+        tmp_req_amo.sid = hpdcache_req_sid_i;
+        tmp_req_amo.tid = '1;
+        tmp_req_amo.need_rsp = 1'b1;
+        tmp_req_amo.phys_indexed = 1'b1;
+        tmp_req_amo.addr_tag = amo_tag;
+        tmp_req_amo.pma = '{
                   uncacheable: hpdcache_req_is_uncacheable,
                   io: 1'b0,
                   wr_policy_hint: hpdcache_pkg::HPDCACHE_WR_POLICY_AUTO
-              }
-          };
+                  };
+       end
 
-      assign hpdcache_req_store = '{
-              addr_offset: cva6_req_i.address_index,
-              wdata: cva6_req_i.data_wdata,
-              op: store_op,
-              be: cva6_req_i.data_be,
-              size: cva6_req_i.data_size,
-              sid: hpdcache_req_sid_i,
-              tid: '0,
-              need_rsp:
-              store_op
-              !=
-              hpdcache_pkg::HPDCACHE_REQ_STORE,  // CMO requests need a response
-              phys_indexed: 1'b1,
-              addr_tag: cva6_req_i.address_tag,
-              pma: '{
+        assign hpdcache_req_amo = tmp_req_amo;
+
+       always_comb begin
+        tmp_req_store = '0;
+
+        tmp_req_store.addr_offset = cva6_req_i.address_index;
+        tmp_req_store.wdata = cva6_req_i.data_wdata;
+        tmp_req_store.op = hpdcache_pkg::HPDCACHE_REQ_STORE;
+        tmp_req_store.be = cva6_req_i.data_be;
+        tmp_req_store.size = cva6_req_i.data_size;
+        tmp_req_store.sid = hpdcache_req_sid_i;
+        tmp_req_store.tid = '0;
+        tmp_req_store.need_rsp = 1'b0;
+        tmp_req_store.phys_indexed = 1'b1;
+        tmp_req_store.addr_tag = cva6_req_i.address_tag;
+        tmp_req_store.pma = '{
                   uncacheable: hpdcache_req_is_uncacheable,
                   io: 1'b0,
                   wr_policy_hint: hpdcache_pkg::HPDCACHE_WR_POLICY_AUTO
-              }
-          };
+                  };
+      end
+      assign hpdcache_req_store = tmp_req_store;
 
-      assign hpdcache_req_flush = '{
-              addr_offset: '0,
-              addr_tag: '0,
-              wdata: '0,
-              op:
-              InvalidateOnFlush
-              ?
-              hpdcache_pkg::HPDCACHE_REQ_CMO_FLUSH_INVAL_ALL
-              :
-              hpdcache_pkg::HPDCACHE_REQ_CMO_FLUSH_ALL,
-              be: '0,
-              size: '0,
-              sid: hpdcache_req_sid_i,
-              tid: '0,
-              need_rsp: 1'b1,
-              phys_indexed: 1'b0,
-              pma: '{
+      always_comb begin
+        tmp_req_flush = '0;
+
+        tmp_req_flush.addr_offset = '0;
+        tmp_req_flush.addr_tag = '0;
+        tmp_req_flush.wdata = '0;
+        tmp_req_flush.op = InvalidateOnFlush
+                            ? hpdcache_pkg::HPDCACHE_REQ_CMO_FLUSH_INVAL_ALL
+                            : hpdcache_pkg::HPDCACHE_REQ_CMO_FLUSH_ALL;
+        tmp_req_flush.be = '0;
+        tmp_req_flush.size = '0;
+        tmp_req_flush.sid = hpdcache_req_sid_i;
+        tmp_req_flush.tid = '0;
+        tmp_req_flush.need_rsp = 1'b1;
+        tmp_req_flush.phys_indexed = 1'b0;
+        tmp_req_flush.pma ='{
                   uncacheable: 1'b0,
                   io: 1'b0,
                   wr_policy_hint: hpdcache_pkg::HPDCACHE_WR_POLICY_AUTO
-              }
-          };
+                  };
+      end 
+
+      assign hpdcache_req_flush = tmp_req_flush;
 
       assign forward_store = cva6_req_i.data_req;
       assign forward_amo = cva6_amo_req_i.req;
