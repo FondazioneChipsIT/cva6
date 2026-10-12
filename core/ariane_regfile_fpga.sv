@@ -129,7 +129,7 @@ module ariane_regfile_fpga #(
         end
         if (CVA6Cfg.FpgaAlteraEn) begin
           for (int k = 0; k < NR_READ_PORTS; k++) begin : block_read
-            mem_read_sync[j][k] = mem[j][raddr_i[k]];  // synchronous RAM
+            mem_read_sync[j][k] <= mem[j][raddr_i[k]];  // synchronous RAM
             read_after_write[k] <= '0;
             if (waddr_i[j] == raddr_i[k])
               read_after_write[k] <= we_i[j] && ~waddr_i[j] != 0; // Identify if we need to read the content that was written
