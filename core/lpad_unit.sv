@@ -33,6 +33,8 @@ module lpad_unit
     input scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_i,
     // Current committing instruction is cancelled - ISSUE_STAGE
     input logic [CVA6Cfg.NrCommitPorts-1:0] commit_drop_i,
+    // Current committing instruction is acknowledged (retires) - COMMIT_STAGE
+    input logic [CVA6Cfg.NrCommitPorts-1:0] commit_ack_i,
     // Landing pad expected - CSR_REGFILE
     output elp_t elp_o,
     // Current committing instruction - COMMIT_STAGE
@@ -70,8 +72,20 @@ module lpad_unit
   assign tmp_elp[0]    = elp_i;
   assign tmp_lpl[0]    = lpl_q;
   assign tmp_bypass[0] = 1'b0;
-  assign elp_o         = tmp_elp[CVA6Cfg.NrCommitPorts];
-  assign lpl_d         = tmp_lpl[CVA6Cfg.NrCommitPorts];
+
+  // The landing pad state must only advance past instructions that the
+  // commit stage actually acknowledges: e.g. an indirect jump on port 1 behind
+  // a CSR/FENCE on port 0 is not acknowledged and must not set ELP yet.
+  always_comb begin : commit_state
+    elp_o = elp_i;
+    lpl_d = lpl_q;
+    for (int unsigned i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
+      if (commit_ack_i[i]) begin
+        elp_o = tmp_elp[i+1];
+        lpl_d = tmp_lpl[i+1];
+      end
+    end
+  end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
