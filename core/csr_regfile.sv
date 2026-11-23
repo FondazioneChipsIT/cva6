@@ -2414,9 +2414,8 @@ module csr_regfile
         else elp_d = NO_LPAD_EXPECTED;
       end
 
-      // Assign xPELP flags
-      if (ex_i.valid) begin
-        elp_d = NO_LPAD_EXPECTED;
+      // xPELP on traps only; Debug Mode entry (halt request, ebreak, step) saves dcsr.pelp
+      if (ex_i.valid && !(CVA6Cfg.DebugEn && (debug_mode_q || debug_mode_d))) begin
         if (priv_lvl_d == riscv::PRIV_LVL_M) begin
           mstatus_d.mpelp = elp_i;  // save elp state on traps delivered to M mode
         end else if (CVA6Cfg.RVS && (priv_lvl_d == riscv::PRIV_LVL_S)) begin
@@ -2426,9 +2425,12 @@ module csr_regfile
         end else if (CVA6Cfg.RVS && priv_lvl_d == riscv::PRIV_LVL_HS) begin
           mstatus_d.spelp = elp_i;  // save elp state on traps delivered to HS mode
         end
-        if (CVA6Cfg.DebugEn && debug_mode_d && !debug_mode_q) begin
-          dcsr_d.pelp = elp_i;  // save elp state upon entering debug mode
-        end
+      end
+      if (CVA6Cfg.DebugEn && debug_mode_d && !debug_mode_q) begin
+        dcsr_d.pelp = elp_d;  // ELP after the retiring instruction (e.g. a stepped xRET)
+      end
+      if (ex_i.valid || (CVA6Cfg.DebugEn && debug_mode_d && !debug_mode_q)) begin
+        elp_d = NO_LPAD_EXPECTED;
       end
 
     end else begin
