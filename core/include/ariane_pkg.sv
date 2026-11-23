@@ -669,7 +669,9 @@ package ariane_pkg;
     LPAD_EXPECTED = 1'b1
   } elp_t;
 
+  // Landing pad label: x7[31:12], compared with the LPAD U-immediate
   localparam LPAD_LABEL_BITS = 20;
+  localparam LPAD_LABEL_LSB = 12;
   typedef logic [LPAD_LABEL_BITS-1:0] lpl_t;
 
   // -------------------

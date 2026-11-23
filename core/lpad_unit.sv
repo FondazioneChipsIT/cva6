@@ -35,6 +35,10 @@ module lpad_unit
     input logic [CVA6Cfg.NrCommitPorts-1:0] commit_drop_i,
     // Current committing instruction is acknowledged (retires) - COMMIT_STAGE
     input logic [CVA6Cfg.NrCommitPorts-1:0] commit_ack_i,
+    // Integer register file write port (x7 shadow copy) - COMMIT_STAGE
+    input logic [CVA6Cfg.NrCommitPorts-1:0][4:0] waddr_i,
+    input logic [CVA6Cfg.NrCommitPorts-1:0][CVA6Cfg.XLEN-1:0] wdata_i,
+    input logic [CVA6Cfg.NrCommitPorts-1:0] we_gpr_i,
     // Landing pad expected - CSR_REGFILE
     output elp_t elp_o,
     // Current committing instruction - COMMIT_STAGE
@@ -78,11 +82,21 @@ module lpad_unit
   // a CSR/FENCE on port 0 is not acknowledged and must not set ELP yet.
   always_comb begin : commit_state
     elp_o = elp_i;
-    lpl_d = lpl_q;
     for (int unsigned i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
       if (commit_ack_i[i]) begin
         elp_o = tmp_elp[i+1];
-        lpl_d = tmp_lpl[i+1];
+      end
+    end
+  end
+
+  // Shadow copy of x7[31:12], updated with the same write port as the integer
+  // register file.
+  // The forwarding chain (tmp_lpl) only serves younger ports of the same cycle.
+  always_comb begin : x7_shadow
+    lpl_d = lpl_q;
+    for (int unsigned i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
+      if (we_gpr_i[i] && waddr_i[i] == 5'd7) begin
+        lpl_d = wdata_i[i][LPAD_LABEL_LSB+:LPAD_LABEL_BITS];
       end
     end
   end

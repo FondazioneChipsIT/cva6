@@ -25,7 +25,7 @@ module lpad_port
     input logic lpe_i,
     // Landing pad expected
     input elp_t elp_i,
-    // Landing pad lable
+    // Landing pad label: x7[31:12] before this instruction
     input lpl_t lpl_i,
     // Current committing instruction
     input scoreboard_entry_t sbe_i,
@@ -35,7 +35,7 @@ module lpad_port
     input logic bypass_i,
     // Landing pad expected
     output elp_t elp_o,
-    // Landing pad lable
+    // Landing pad label: x7[31:12] after this instruction
     output lpl_t lpl_o,
     // Current committing instruction
     output scoreboard_entry_t sbe_o,
@@ -49,15 +49,24 @@ module lpad_port
   logic is_sbe_lplwrite;
   logic is_sbe_jalr_lpad;
 
+  // The LPAD label is the U-immediate, i.e. result[31:12] (the ALU puts the
+  // immediate in result), and it is compared with x7[31:12] (lpl_i).
   assign is_sbe_valid       = sbe_i.valid && ~sbe_i.ex.valid && lpe_i;
   assign is_sbe_lpad        = sbe_i.pc[1:0] == 2'b0 && sbe_i.op == ZICFI_LPAD;
-  assign is_sbe_lplmismatch = sbe_i.result != 'b0 && sbe_i.result[LPAD_LABEL_BITS-1:0] != lpl_i;
-  assign is_sbe_lplwrite    = sbe_i.rd == 'd7;
+  assign is_sbe_lplmismatch = sbe_i.result[LPAD_LABEL_LSB+:LPAD_LABEL_BITS] != '0 &&
+                              sbe_i.result[LPAD_LABEL_LSB+:LPAD_LABEL_BITS] != lpl_i;
+  // Integer write to x7. Only used to forward the new x7 label to the younger
+  // commit ports of this cycle; the registered copy is updated from the
+  // register file write port in lpad_unit.
+  assign is_sbe_lplwrite    = sbe_i.valid && ~sbe_i.ex.valid && ~drop_i && sbe_i.rd == 'd7 &&
+                              ~(CVA6Cfg.FpPresent && is_rd_fpr(sbe_i.op));
   assign is_sbe_jalr_lpad   = sbe_i.op == JALR && ~(sbe_i.rs1 inside {'d1, 'd5, 'd7});
+
+  // x7 tracking is independent of the landing pad enable and of the checks
+  assign lpl_o = is_sbe_lplwrite ? sbe_i.result[LPAD_LABEL_LSB+:LPAD_LABEL_BITS] : lpl_i;
 
   always_comb begin : control_flow_check
     elp_o = elp_i;
-    lpl_o = lpl_i;
     sbe_o = sbe_i;
     bypass_o = bypass_i;
     if (is_sbe_valid) begin
@@ -81,8 +90,6 @@ module lpad_port
           // next instruction committed should be a landing pad.
           if (is_sbe_jalr_lpad) begin
             elp_o = LPAD_EXPECTED;
-          end else if (is_sbe_lplwrite) begin
-            lpl_o = sbe_i.result[LPAD_LABEL_BITS-1:0];
           end
         end
       end

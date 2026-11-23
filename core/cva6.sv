@@ -1129,6 +1129,9 @@ module cva6
       .commit_instr_i ( commit_instr_id_lp     ),
       .commit_drop_i  ( commit_drop_id_commit  ),
       .commit_ack_i   ( commit_ack_commit_id   ),
+      .waddr_i        ( waddr_commit_id        ),
+      .wdata_i        ( wdata_commit_id        ),
+      .we_gpr_i       ( we_gpr_commit_id       ),
       .elp_o          ( elp_lp_csr             ),
       .commit_instr_o ( commit_instr_lp_commit )
     );
