@@ -345,15 +345,17 @@ module decoder
               endcase
             end
             3'b100: begin
-              if (CVA6Cfg.RVZiCfiSS && instr.itype.imm == 12'b1100_1101_1100) begin  // SSPOPCHK
+              // Zicfiss on MOP.R.28 / MOP.RR.7, other register fields keep the Zimop behavior
+              // (CSR no-op writing 0 to rd)
+              if (CVA6Cfg.RVZiCfiSS && instr.itype.imm == 12'b1100_1101_1100) begin  // MOP.R.28
                 if (xsse_i) begin
-                  if (instr.itype.rs1 != '0) begin
+                  if (instr.itype.rd == '0 && instr.itype.rs1 inside {5'd1, 5'd5}) begin  // SSPOPCHK
                     instruction_o.fu = LOAD;
                     imm_select = IIMM;
                     instruction_o.rs1 = instr.itype.rs1;
                     instruction_o.rd = instr.itype.rd;
                     instruction_o.op = ariane_pkg::SSPOPCHK;
-                  end else begin  // SSRDP
+                  end else if (instr.itype.rs1 == '0 && instr.itype.rd != '0) begin  // SSRDP
                     instruction_o.fu = CSR;
                     ssprd = 1'b1;
                     imm_select = IIMM;
@@ -363,8 +365,9 @@ module decoder
                     instruction_o.use_zimm = 1'b1;
                   end
                 end
-              end else if (CVA6Cfg.RVZiCfiSS && instr.rtype.funct7 == 7'b110_0111) begin  // SSPUSH
-                if (xsse_i) begin
+              end else if (CVA6Cfg.RVZiCfiSS && instr.rtype.funct7 == 7'b110_0111) begin  // MOP.RR.7
+                if (xsse_i && instr.rtype.rd == '0 && instr.rtype.rs1 == '0 &&
+                    instr.rtype.rs2 inside {5'd1, 5'd5}) begin  // SSPUSH
                   instruction_o.rs2 = instr.rtype.rs2;
                   instruction_o.op  = ariane_pkg::SSPUSH;
                   instruction_o.fu  = STORE;
