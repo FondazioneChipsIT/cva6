@@ -415,7 +415,16 @@ module compressed_decoder #(
               };
             end
 
-            if ({instr_i[12], instr_i[6:2]} == 6'b0) illegal_instr_o = 1'b1;
+            if ({instr_i[12], instr_i[6:2]} == 6'b0) begin
+              // C.LUI xn, 0 is reserved (Zcmop C.MOP.n); Zicfiss uses C.MOP.1 and C.MOP.5
+              if (CVA6Cfg.RVZiCfiSS && instr_i[11:7] == 5'd1) begin
+                // c.sspush x1 -> sspush x1
+                instr_o = {7'b1100111, 5'b00001, 5'h00, 3'b100, 5'h00, riscv::OpcodeSystem};
+              end else if (CVA6Cfg.RVZiCfiSS && instr_i[11:7] == 5'd5) begin
+                // c.sspopchk x5 -> sspopchk x5
+                instr_o = {12'b110011011100, 5'b00101, 3'b100, 5'b00000, riscv::OpcodeSystem};
+              end else illegal_instr_o = 1'b1;
+            end
           end
 
           riscv::OpcodeC1MiscAlu: begin
@@ -794,46 +803,38 @@ module compressed_decoder #(
           end
 
           riscv::OpcodeC2Ldsp: begin
-            if (CVA6Cfg.RVZiCfiSS && instr_i[12:2] == 10'h020) begin
-              // c.sspush x1 -> sspush x1
-              instr_o = {7'b1100111, 5'b00001, 5'h00, 3'b100, 5'h00, riscv::OpcodeSystem};
-            end else if (CVA6Cfg.RVZiCfiSS && instr_i[12:2] == 10'h0A0) begin
-              // c.sspopchk x5 -> sspopchk x5
-              instr_o = {12'b110011011100, 5'b00101, 3'b100, 5'b00000, riscv::OpcodeSystem};
+            // RV64
+            //   c.ldsp -> ld rd, imm(x2)
+            // RV32
+            //   c.flwsp -> flw fprd, imm(x2)
+            if (CVA6Cfg.IS_XLEN64) begin
+              instr_o = {
+                3'b0,
+                instr_i[4:2],
+                instr_i[12],
+                instr_i[6:5],
+                3'b000,
+                5'h02,
+                3'b011,
+                instr_i[11:7],
+                riscv::OpcodeLoad
+              };
+              if (instr_i[11:7] == 5'b0) illegal_instr_o = 1'b1;
             end else begin
-              // RV64
-              //   c.ldsp -> ld rd, imm(x2)
-              // RV32
-              //   c.flwsp -> flw fprd, imm(x2)
-              if (CVA6Cfg.IS_XLEN64) begin
+              if (CVA6Cfg.FpPresent) begin
                 instr_o = {
-                  3'b0,
-                  instr_i[4:2],
+                  4'b0,
+                  instr_i[3:2],
                   instr_i[12],
-                  instr_i[6:5],
-                  3'b000,
+                  instr_i[6:4],
+                  2'b00,
                   5'h02,
-                  3'b011,
+                  3'b010,
                   instr_i[11:7],
-                  riscv::OpcodeLoad
+                  riscv::OpcodeLoadFp
                 };
-                if (instr_i[11:7] == 5'b0) illegal_instr_o = 1'b1;
               end else begin
-                if (CVA6Cfg.FpPresent) begin
-                  instr_o = {
-                    4'b0,
-                    instr_i[3:2],
-                    instr_i[12],
-                    instr_i[6:4],
-                    2'b00,
-                    5'h02,
-                    3'b010,
-                    instr_i[11:7],
-                    riscv::OpcodeLoadFp
-                  };
-                end else begin
-                  illegal_instr_o = 1'b1;
-                end
+                illegal_instr_o = 1'b1;
               end
             end
           end
