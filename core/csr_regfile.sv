@@ -256,6 +256,8 @@ module csr_regfile
   logic mtvec_rst_load_q;  // used to determine whether we came out of reset
 
   logic [CVA6Cfg.XLEN-1:0] ssp_q, ssp_d;
+  // ssp[1:0] read-only zero, ssp[2] too when UXLEN/SXLEN can never be 32
+  localparam int unsigned SspRoBits = (CVA6Cfg.XLEN == 64) ? 3 : 2;
   logic [CVA6Cfg.XLEN-1:0] dpc_q, dpc_d;
   logic [CVA6Cfg.XLEN-1:0] dscratch0_q, dscratch0_d;
   logic [CVA6Cfg.XLEN-1:0] dscratch1_q, dscratch1_d;
@@ -1157,8 +1159,8 @@ module csr_regfile
                 virtual_update_access_exception = 1'b1;
               else if (priv_lvl_o == riscv::PRIV_LVL_U && v_q && (henv_sse_q == 1'b0 || senv_sse_q == 1'b0))  // Write attempts in VU mode
                 virtual_update_access_exception = 1'b1;
-              else ssp_d = csr_wdata;
-            end else ssp_d = csr_wdata;
+              else ssp_d = {csr_wdata[CVA6Cfg.XLEN-1:SspRoBits], {SspRoBits{1'b0}}};
+            end else ssp_d = {csr_wdata[CVA6Cfg.XLEN-1:SspRoBits], {SspRoBits{1'b0}}};
           end
         end
         riscv::CSR_SS_TESTMODE: begin
