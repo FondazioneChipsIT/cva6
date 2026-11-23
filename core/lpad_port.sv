@@ -44,6 +44,7 @@ module lpad_port
 );
 
   logic is_sbe_valid;
+  logic is_sbe_ex_before_lp;
   logic is_sbe_lpad;
   logic is_sbe_lplmismatch;
   logic is_sbe_lplwrite;
@@ -51,7 +52,11 @@ module lpad_port
 
   // The LPAD label is the U-immediate, i.e. result[31:12] (the ALU puts the
   // immediate in result), and it is compared with x7[31:12] (lpl_i).
-  assign is_sbe_valid       = sbe_i.valid && ~sbe_i.ex.valid && lpe_i;
+  // Interrupts, debug request and fetch faults have priority over the landing pad fault
+  assign is_sbe_ex_before_lp = sbe_i.ex.valid && (sbe_i.ex.cause[CVA6Cfg.XLEN-1] ||
+                               sbe_i.ex.cause inside {riscv::DEBUG_REQUEST, riscv::INSTR_ACCESS_FAULT,
+                                                      riscv::INSTR_PAGE_FAULT, riscv::INSTR_GUEST_PAGE_FAULT});
+  assign is_sbe_valid       = sbe_i.valid && ~is_sbe_ex_before_lp && lpe_i;
   assign is_sbe_lpad        = sbe_i.pc[1:0] == 2'b0 && sbe_i.op == ZICFI_LPAD;
   assign is_sbe_lplmismatch = sbe_i.result[LPAD_LABEL_LSB+:LPAD_LABEL_BITS] != '0 &&
                               sbe_i.result[LPAD_LABEL_LSB+:LPAD_LABEL_BITS] != lpl_i;
@@ -68,7 +73,7 @@ module lpad_port
   always_comb begin : control_flow_check
     elp_o = elp_i;
     sbe_o = sbe_i;
-    bypass_o = bypass_i;
+    bypass_o = bypass_i || sbe_i.ex.valid;
     if (is_sbe_valid) begin
       // The core is committing a valid scoreboard entry.
       if (~bypass_i && ~drop_i) begin
@@ -78,6 +83,7 @@ module lpad_port
           // A landing pad is expected, any instruction except for a valid
           // LPAD issues an exception.
           if (~is_sbe_lpad || is_sbe_lplmismatch) begin
+            sbe_o.ex       = '0;
             sbe_o.ex.cause = riscv::SOFTWARE_CHECK;
             sbe_o.ex.tval = {{CVA6Cfg.XLEN - 2{1'b0}}, 2'b10};
             sbe_o.ex.valid = 1'b1;
