@@ -160,16 +160,28 @@ module id_stage #(
   logic              [CVA6Cfg.NrIssuePorts-1:0][31:0] instruction_deco;
   logic              [CVA6Cfg.NrIssuePorts-1:0]       is_compressed_deco;
 
-  // Compute the shadow stack enabled state
+  // Compute the shadow stack enabled state (xSSE):
+  //   M        : ss_testmode (CVA6 test mode, 0 per spec)
+  //   HS/S     : menvcfg.SSE
+  //   VS       : menvcfg.SSE & henvcfg.SSE
+  //   U        : menvcfg.SSE & senvcfg.SSE
+  //   VU       : menvcfg.SSE & henvcfg.SSE & senvcfg.SSE
+  //   no S-mode: 0 in U
+  // menvcfg.SSE (and henvcfg.SSE for VU) is ANDed in because the spec makes the
+  // lower level SSE bits read as zero when it is zero.
   always_comb begin
-    if (priv_lvl_i == riscv::PRIV_LVL_M && !ss_testmode_i) xsse_o = 1'b0;
-    else if (priv_lvl_i == riscv::PRIV_LVL_M && ss_testmode_i) xsse_o = 1'b1;
-    else begin
-      if (priv_lvl_i == riscv::PRIV_LVL_S || priv_lvl_i == riscv::PRIV_LVL_HS) xsse_o = menv_sse_i;
-      else if (CVA6Cfg.RVH && priv_lvl_i == riscv::PRIV_LVL_S && v_i) xsse_o = henv_sse_i;
-      else if (priv_lvl_i == riscv::PRIV_LVL_U) xsse_o = senv_sse_i;
-      else xsse_o = 1'b0;
-    end
+    unique case (priv_lvl_i)
+      // M
+      riscv::PRIV_LVL_M: xsse_o = ss_testmode_i;
+      // HS/S (V=0) and VS (V=1)
+      riscv::PRIV_LVL_S:
+      xsse_o = CVA6Cfg.RVS && menv_sse_i && (!(CVA6Cfg.RVH && v_i) || henv_sse_i);
+      // U (V=0) and VU (V=1)
+      riscv::PRIV_LVL_U:
+      xsse_o = CVA6Cfg.RVS && menv_sse_i && senv_sse_i && (!(CVA6Cfg.RVH && v_i) || henv_sse_i);
+      // 2'b10 is never a running mode (PRIV_LVL_HS is only used for CSR decoding)
+      default: xsse_o = 1'b0;
+    endcase
   end
 
   if (CVA6Cfg.RVC) begin

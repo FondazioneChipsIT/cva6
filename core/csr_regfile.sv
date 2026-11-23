@@ -1164,7 +1164,10 @@ module csr_regfile
         riscv::CSR_SS_TESTMODE: begin
           if (CVA6Cfg.RVZiCfiSS) begin
             if (priv_lvl_o != riscv::PRIV_LVL_M) update_access_exception = 1'b1;
-            else ss_testmode_d = csr_wdata[0];
+            else begin
+              ss_testmode_d = csr_wdata[0];
+              flush_o = 1'b1;  // xSSE of the running mode changes
+            end
           end
         end
         riscv::CSR_FTRAN: begin
