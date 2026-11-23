@@ -1587,15 +1587,18 @@ module decoder
               5'h8: instruction_o.op = ariane_pkg::AMO_ORW;
               6'h9: begin  // detected an SSAMOSWAP
                 if (CVA6Cfg.RVZiCfiSS) begin
-                  if ((priv_lvl_i == riscv::PRIV_LVL_M && !menv_sse_i) || (!CVA6Cfg.RVS))
+                  // senvcfg.SSE reads as zero in VU when henvcfg.SSE is zero
+                  if ((priv_lvl_i != riscv::PRIV_LVL_M && !menv_sse_i) || (!CVA6Cfg.RVS))
                     illegal_instr = 1'b1;
-                  else if (priv_lvl_i == riscv::PRIV_LVL_U && !senv_sse_i) illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && !(CVA6Cfg.RVH && v_i) && !senv_sse_i)
+                    illegal_instr = 1'b1;
                   else if (priv_lvl_i == riscv::PRIV_LVL_S && CVA6Cfg.RVH && v_i && !henv_sse_i)
                     virtual_illegal_instr = 1'b1;
-                  else if (priv_lvl_i == riscv::PRIV_LVL_U && CVA6Cfg.RVH && v_i && !senv_sse_i)
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && CVA6Cfg.RVH && v_i &&
+                           (!henv_sse_i || !senv_sse_i))
                     virtual_illegal_instr = 1'b1;
                   else instruction_o.op = ariane_pkg::SSAMO_SWAPW;
-                end
+                end else illegal_instr = 1'b1;
               end
               5'hC: instruction_o.op = ariane_pkg::AMO_ANDW;
               5'h10: instruction_o.op = ariane_pkg::AMO_MINW;
@@ -1618,15 +1621,18 @@ module decoder
               5'h8: instruction_o.op = ariane_pkg::AMO_ORD;
               6'h9: begin  // detected an SSAMOSWAP
                 if (CVA6Cfg.RVZiCfiSS) begin
-                  if ((priv_lvl_i == riscv::PRIV_LVL_M && !menv_sse_i) || (!CVA6Cfg.RVS))
+                  // senvcfg.SSE reads as zero in VU when henvcfg.SSE is zero
+                  if ((priv_lvl_i != riscv::PRIV_LVL_M && !menv_sse_i) || (!CVA6Cfg.RVS))
                     illegal_instr = 1'b1;
-                  else if (priv_lvl_i == riscv::PRIV_LVL_U && !senv_sse_i) illegal_instr = 1'b1;
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && !(CVA6Cfg.RVH && v_i) && !senv_sse_i)
+                    illegal_instr = 1'b1;
                   else if (priv_lvl_i == riscv::PRIV_LVL_S && CVA6Cfg.RVH && v_i && !henv_sse_i)
                     virtual_illegal_instr = 1'b1;
-                  else if (priv_lvl_i == riscv::PRIV_LVL_U && CVA6Cfg.RVH && v_i && !senv_sse_i)
+                  else if (priv_lvl_i == riscv::PRIV_LVL_U && CVA6Cfg.RVH && v_i &&
+                           (!henv_sse_i || !senv_sse_i))
                     virtual_illegal_instr = 1'b1;
                   else instruction_o.op = ariane_pkg::SSAMO_SWAPD;
-                end
+                end else illegal_instr = 1'b1;
               end
               5'hC: instruction_o.op = ariane_pkg::AMO_ANDD;
               5'h10: instruction_o.op = ariane_pkg::AMO_MIND;
