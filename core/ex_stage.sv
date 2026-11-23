@@ -207,13 +207,9 @@ module ex_stage
     // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.PPNW-1:0] satp_ppn_i,
     // TO_BE_COMPLETED - CSR_REGFILE
-    input logic [CVA6Cfg.ModeW-1:0] satp_mode_i,
-    // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.ASID_WIDTH-1:0] asid_i,
     // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.PPNW-1:0] vsatp_ppn_i,
-    // TO_BE_COMPLETED - CSR_REGFILE
-    input logic [CVA6Cfg.ModeW-1:0] vsatp_mode_i,
     // TO_BE_COMPLETED - CSR_REGFILE
     input logic [CVA6Cfg.ASID_WIDTH-1:0] vs_asid_i,
     // TO_BE_COMPLETED - CSR_REGFILE
@@ -585,9 +581,7 @@ module ex_stage
       .mxr_i,
       .vmxr_i,
       .satp_ppn_i,
-      .satp_mode_i,
       .vsatp_ppn_i,
-      .vsatp_mode_i,
       .hgatp_ppn_i,
       .asid_i,
       .vs_asid_i,

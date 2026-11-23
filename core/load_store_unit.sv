@@ -118,13 +118,9 @@ module load_store_unit
     // TO_BE_COMPLETED - TO_BE_COMPLETED
     input  logic             [      CVA6Cfg.PPNW-1:0] satp_ppn_i,
     // TO_BE_COMPLETED - TO_BE_COMPLETED
-    input  logic             [     CVA6Cfg.ModeW-1:0] satp_mode_i,
-    // TO_BE_COMPLETED - TO_BE_COMPLETED
     input  logic             [CVA6Cfg.ASID_WIDTH-1:0] asid_i,
     // TO_BE_COMPLETED - TO_BE_COMPLETED
     input  logic             [      CVA6Cfg.PPNW-1:0] vsatp_ppn_i,
-    // TO_BE_COMPLETED - TO_BE_COMPLETED
-    input  logic             [     CVA6Cfg.ModeW-1:0] vsatp_mode_i,
     // TO_BE_COMPLETED - TO_BE_COMPLETED
     input  logic             [CVA6Cfg.ASID_WIDTH-1:0] vs_asid_i,
     // TO_BE_COMPLETED - TO_BE_COMPLETED
@@ -856,21 +852,15 @@ module load_store_unit
       endcase
     end
 
-    if (CVA6Cfg.RVZiCfiSS) begin
-      if (lsu_ctrl.valid && (lsu_ctrl.operation == SSPOPCHK || lsu_ctrl.operation == SSPUSH)) begin
-        if ((CVA6Cfg.IS_XLEN64 && lsu_ctrl.vaddr[2:0] != 3'b000) || (!CVA6Cfg.IS_XLEN64 && lsu_ctrl.vaddr[1:0] != 2'b00) 
-            || ((satp_mode_i == '0 || (CVA6Cfg.RVH && vsatp_mode_i == '0 && v_i)) && priv_lvl_i != riscv::PRIV_LVL_M)) begin
-          cva6_misaligned_exception.cause = riscv::ST_ACCESS_FAULT;
-          cva6_misaligned_exception.valid = 1'b1;
-          if (CVA6Cfg.TvalEn)
-            cva6_misaligned_exception.tval = {{CVA6Cfg.XLEN - CVA6Cfg.VLEN{1'b0}}, lsu_ctrl.vaddr};
-          if (CVA6Cfg.RVH) begin
-            cva6_misaligned_exception.tval2 = '0;
-            cva6_misaligned_exception.tinst = lsu_ctrl.tinst;
-            cva6_misaligned_exception.gva   = ld_st_v_i;
-          end
-        end
-      end else if (lsu_ctrl.valid && (lsu_ctrl.operation == SSAMO_SWAPD || lsu_ctrl.operation == SSAMO_SWAPW) && priv_lvl_i == riscv::PRIV_LVL_M) begin
+    // Zicfiss: store/AMO access-fault for a misaligned ssp, Bare satp (vsatp when V=1) below M,
+    // or SSAMOSWAP in M (effective privilege and translation, i.e. honoring MPRV)
+    if (CVA6Cfg.RVZiCfiSS && lsu_ctrl.valid && is_ss(lsu_ctrl.operation)) begin
+      if (((lsu_ctrl.operation == SSPOPCHK || lsu_ctrl.operation == SSPUSH) &&
+           ((CVA6Cfg.IS_XLEN64 && lsu_ctrl.vaddr[2:0] != 3'b000) ||
+            (!CVA6Cfg.IS_XLEN64 && lsu_ctrl.vaddr[1:0] != 2'b00))) ||
+          (ld_st_priv_lvl_i != riscv::PRIV_LVL_M && !en_ld_st_translation_i) ||
+          (ld_st_priv_lvl_i == riscv::PRIV_LVL_M &&
+           lsu_ctrl.operation inside {SSAMO_SWAPD, SSAMO_SWAPW})) begin
         cva6_misaligned_exception.cause = riscv::ST_ACCESS_FAULT;
         cva6_misaligned_exception.valid = 1'b1;
         if (CVA6Cfg.TvalEn)

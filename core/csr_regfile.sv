@@ -116,13 +116,9 @@ module csr_regfile
     // TO_BE_COMPLETED - EX_STAGE
     output logic [CVA6Cfg.PPNW-1:0] satp_ppn_o,
     // TO_BE_COMPLETED - EX_STAGE
-    output logic [CVA6Cfg.ModeW-1:0] satp_mode_o,
-    // TO_BE_COMPLETED - EX_STAGE
     output logic [CVA6Cfg.ASID_WIDTH-1:0] asid_o,
     // TO_BE_COMPLETED - EX_STAGE
     output logic [CVA6Cfg.PPNW-1:0] vsatp_ppn_o,
-    // TO_BE_COMPLETED - EX_STAGE
-    output logic [CVA6Cfg.ModeW-1:0] vsatp_mode_o,
     // TO_BE_COMPLETED - EX_STAGE
     output logic [CVA6Cfg.ASID_WIDTH-1:0] vs_asid_o,
     // TO_BE_COMPLETED - EX_STAGE
@@ -347,8 +343,6 @@ module csr_regfile
   assign menv_sse_o = menv_sse_q;
   assign ssp_o = ssp_q;
   assign elp_o = elp_q;
-  assign vsatp_mode_o = vsatp_q.mode;
-  assign satp_mode_o = satp_q.mode;
   assign ss_testmode_o = ss_testmode_q;
   // ----------------
   // CSR Read logic
